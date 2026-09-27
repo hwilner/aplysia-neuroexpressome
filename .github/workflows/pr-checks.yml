@@ -1,0 +1,69 @@
+name: pre-registration and artefact checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: No large files committed
+        run: |
+          # Data, models and figures are released via Zenodo, not committed.
+          find . -type f -size +2M -not -path './.git/*' \
+            | grep -v -E '\.(png|jpg|gif)$' \
+            && { echo "::error::Files over 2 MB committed. Release them via Zenodo instead."; exit 1; } \
+            || echo "OK: no large non-image files"
+
+      - name: No secrets in the tree
+        run: |
+          # Cheap but catches the common accident.
+          if git grep -nIE '(gh[pousr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{20,})' -- \
+             ':!.github/workflows/*' ; then
+            echo "::error::Possible GitHub token in tracked files. Revoke it, then remove."
+            exit 1
+          fi
+          echo "OK: no token patterns found"
+
+      - name: Pre-registration is committed before analysis
+        run: |
+          # The pre-registration's commit date must precede the first analysis artefact.
+          pr=$(git log --diff-filter=A --format='%cI %H' -- materials-and-methods.md | tail -1 | cut -d' ' -f1)
+          if [ -z "$pr" ]; then
+            echo "::error::materials-and-methods.md has no add-commit. Pre-registration must be committed."
+            exit 1
+          fi
+          first_analysis=$(git log --diff-filter=A --format='%cI' -- 'results/*' 'src/analysis/*' | tail -1)
+          if [ -n "$first_analysis" ] && [[ "$first_analysis" < "$pr" ]]; then
+            echo "::error::Analysis artefacts predate the pre-registration commit."
+            exit 1
+          fi
+          echo "OK: pre-registration committed $pr"
+
+      - name: Every figure has a generating script
+        run: |
+          if [ -d figures ] && [ -d src/figures ]; then
+            for fig in figures/*.png figures/*.svg figures/*.pdf; do
+              [ -e "$fig" ] || continue
+              base=$(basename "$fig"); base="${base%.*}"
+              if ! ls src/figures/"${base}".* >/dev/null 2>&1; then
+                echo "::error::Figure $base has no matching script in src/figures/."
+                exit 1
+              fi
+            done
+            echo "OK: all figures have scripts"
+          else
+            echo "SKIP: no figures directory yet"
+          fi
+
+      - name: Decision log and status are current
+        run: |
+          # A push to a project repo should be reflected somewhere. Advisory, not blocking.
+          echo "Reminder: update STATUS.md in aplysia-research-programme if this closes a milestone."

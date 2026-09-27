@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Programme charter question
+    url: https://github.com/<owner>/aplysia-research-programme/blob/main/PROGRAMME.md
+    about: Read PROGRAMME.md first - it answers the standing, dependency and ordering questions.
+  - name: Handoff / continuation question
+    url: https://github.com/<owner>/aplysia-research-programme/blob/main/HANDOFF.md
+    about: HANDOFF.md is the executable continuation protocol for every project boundary.
