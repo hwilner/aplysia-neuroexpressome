@@ -1,0 +1,32 @@
+%% P01 project Gantt (repo: aplysia-neuroexpressome)
+%% Dates identical to the programme schedule (gantt/projects.csv).
+%% Gates rendered as milestones; crit marks the project-internal critical path.
+
+gantt
+    title P01 AplyNeuroExpress - gene models + ion-channel catalogue, Oct-Dec 2026
+    dateFormat  YYYY-MM-DD
+    axisFormat  %b %d
+    excludes    weekends
+
+    Milestone, paper 1 submitted            :milestone, p1s, 2026-12-18, 0d
+    Env + container pinning                 :p01a, 2026-10-05, 5d
+    Acquire genome + annotation             :crit, p01b, 2026-10-05, 3d
+    Acquire AplysiaTools transcriptome      :p01c, 2026-10-05, 4d
+    BUSCO baseline (before arm)             :crit, p01d, 2026-10-12, 3d
+    Fragmentation diagnostics               :p01e, 2026-10-12, 5d
+    Cross-annotation BUSCO                  :p01f, 2026-10-19, 3d
+    GATE G1 baseline adequacy               :milestone, g1, 2026-10-22, 0d
+    Liftoff lift-off                        :crit, p01g, 2026-10-19, 5d
+    GATE G2 lift coverage                   :milestone, g2, 2026-10-27, 0d
+    Transcriptome ORF prediction            :p01h, 2026-10-26, 5d
+    Gene-model repair                       :crit, p01i, 2026-11-02, 10d
+    OrthoFinder + eggNOG                    :p01j, 2026-11-09, 10d
+    Pfam + InterPro channel sweep           :crit, p01k, 2026-11-16, 5d
+    Membrane topology                       :p01l, 2026-11-23, 3d
+    Dual-annotator curation                 :crit, p01m, 2026-11-23, 10d
+    Kappa + adjudication                    :p01n, 2026-12-07, 3d
+    Isoform analysis                        :p01o, 2026-12-01, 4d
+    Primary statistics T1-T10              :crit, p01p, 2026-12-07, 4d
+    Figures                                 :p01q, 2026-12-14, 3d
+    Manuscript                              :crit, p01r, 2026-12-14, 5d
+    Zenodo release                          :p01s, 2026-12-18, 1d
