@@ -1,0 +1,46 @@
+# Raw and derived data are released via Zenodo, never committed.
+data/raw/
+data/derived/
+*.h5
+*.h5ad
+*.loom
+*.rds
+*.RData
+results/
+
+# Sequencing and alignment intermediates
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.bam
+*.sam
+*.gtf.tmp
+*.gff3.tmp
+
+# Environment
+.venv/
+venv/
+.env
+.env.*
+conda-env/
+*.lock.tmp
+
+# Figures are outputs; the scripts that make them are tracked.
+figures/*.png
+figures/*.pdf
+figures/*.svg
+
+# Editor and OS
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# LaTeX build
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.synctex.gz
