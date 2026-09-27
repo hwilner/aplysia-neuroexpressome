@@ -6,6 +6,10 @@ on:
   push:
     branches: [main]
 
+# Least privilege: the checks only need to read the tree.
+permissions:
+  contents: read
+
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -16,54 +20,81 @@ jobs:
 
       - name: No large files committed
         run: |
-          # Data, models and figures are released via Zenodo, not committed.
-          find . -type f -size +2M -not -path './.git/*' \
-            | grep -v -E '\.(png|jpg|gif)$' \
-            && { echo "::error::Files over 2 MB committed. Release them via Zenodo instead."; exit 1; } \
-            || echo "OK: no large non-image files"
+          set -o pipefail
+          big=$(find . -type f -size +2M -not -path './.git/*' \
+                | grep -vE '\.(png|jpg|gif|svg|pdf)$' || true)
+          if [ -n "$big" ]; then
+            printf '::error::Files over 2 MB committed. Release them via Zenodo instead:\n%s\n' "$big"
+            exit 1
+          fi
+          echo "OK: no large non-image files"
 
       - name: No secrets in the tree
         run: |
-          # Cheap but catches the common accident.
           if git grep -nIE '(gh[pousr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{20,})' -- \
-             ':!.github/workflows/*' ; then
+             ':!.github/workflows/*'; then
             echo "::error::Possible GitHub token in tracked files. Revoke it, then remove."
             exit 1
           fi
           echo "OK: no token patterns found"
 
-      - name: Pre-registration is committed before analysis
+      - name: Pre-registration precedes analysis
         run: |
-          # The pre-registration's commit date must precede the first analysis artefact.
-          pr=$(git log --diff-filter=A --format='%cI %H' -- materials-and-methods.md | tail -1 | cut -d' ' -f1)
+          # The invariant is: no analysis artefact may predate the pre-registration.
+          # A repository in bootstrap state - neither present - violates nothing.
+          pr_path=$(git ls-files | grep -E '(^|/)materials-and-methods\.md$' | head -1)
+          an_path=$(git ls-files | grep -E '^(results|src/analysis|src/scripts)/' | head -1)
+
+          if [ -z "$pr_path" ] && [ -z "$an_path" ]; then
+            echo "SKIP: bootstrap repository. No pre-registration and no analysis yet."
+            echo "      Commit the pre-registration at project kickoff, before any analysis."
+            exit 0
+          fi
+
+          if [ -z "$pr_path" ]; then
+            echo "::error::Analysis artefacts exist (e.g. $an_path) but no materials-and-methods.md"
+            echo "::error::was ever committed. The pre-registration must predate all analysis."
+            exit 1
+          fi
+
+          pr=$(git log --diff-filter=A --format='%cI' -- "$pr_path" | tail -1)
           if [ -z "$pr" ]; then
-            echo "::error::materials-and-methods.md has no add-commit. Pre-registration must be committed."
+            echo "::error::$pr_path is tracked but has no add-commit."
             exit 1
           fi
-          first_analysis=$(git log --diff-filter=A --format='%cI' -- 'results/*' 'src/analysis/*' | tail -1)
+
+          first_analysis=$(git log --diff-filter=A --format='%cI' -- "$an_path" | tail -1)
           if [ -n "$first_analysis" ] && [[ "$first_analysis" < "$pr" ]]; then
-            echo "::error::Analysis artefacts predate the pre-registration commit."
+            echo "::error::Analysis ($first_analysis) predates the pre-registration ($pr)."
             exit 1
           fi
-          echo "OK: pre-registration committed $pr"
+
+          echo "OK: pre-registration '$pr_path' committed $pr"
+          [ -n "$first_analysis" ] && echo "     first analysis artefact $first_analysis" \
+                                   || echo "     no analysis artefacts yet"
 
       - name: Every figure has a generating script
         run: |
-          if [ -d figures ] && [ -d src/figures ]; then
-            for fig in figures/*.png figures/*.svg figures/*.pdf; do
-              [ -e "$fig" ] || continue
-              base=$(basename "$fig"); base="${base%.*}"
-              if ! ls src/figures/"${base}".* >/dev/null 2>&1; then
-                echo "::error::Figure $base has no matching script in src/figures/."
-                exit 1
-              fi
-            done
-            echo "OK: all figures have scripts"
-          else
-            echo "SKIP: no figures directory yet"
+          if [ ! -d figures ]; then
+            echo "SKIP: no figures directory"
+            exit 0
           fi
+          mkdir -p src/figures
+          status=0
+          for fig in figures/*.png figures/*.svg figures/*.pdf; do
+            [ -e "$fig" ] || continue
+            base=$(basename "$fig"); base="${base%.*}"
+            if ! ls src/figures/"${base}".* >/dev/null 2>&1; then
+              echo "::error::Figure $base has no matching script in src/figures/."
+              status=1
+            fi
+          done
+          [ "$status" -eq 0 ] && echo "OK: all figures have scripts"
+          exit "$status"
 
-      - name: Decision log and status are current
+      - name: Programme record is current
         run: |
-          # A push to a project repo should be reflected somewhere. Advisory, not blocking.
-          echo "Reminder: update STATUS.md in aplysia-research-programme if this closes a milestone."
+          # Advisory only. A push to a project repo should be reflected in the
+          # programme repository if it closes a milestone or trips a gate.
+          echo "Reminder: update STATUS.md and DECISIONS.md in aplysia-research-programme"
+          echo "          if this commit closes a milestone or decides a gate."
