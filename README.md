@@ -37,3 +37,17 @@ Not started. The pre-registration is committed before any analysis exists; that 
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
+
+## Contributing
+
+This repository is open. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, and
+read [materials-and-methods.md](materials-and-methods.md) before changing any
+script. The pre-registration is a commitment, and continuous integration fails
+the build if an analysis artefact appears with an earlier commit date than the
+pre-registration.
+
+## Note on the other repositories
+
+The sibling repositories hold the specifications for the other three projects.
+They are not yet public, so those links resolve only for collaborators. Nothing
+in this repository depends on them.
