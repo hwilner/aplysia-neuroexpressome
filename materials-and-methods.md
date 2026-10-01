@@ -2,6 +2,11 @@
 
 > Status: **pre-registration draft.** Written before any analysis is run. Every test named here is fixed in advance; any deviation gets logged in `docs/analysis-deviations.md` with a dated reason. This file is the methods section of the manuscript and doubles as the analysis specification.
 
+![Figure M1 — the shared statistical test-selection procedure](docs/figures/fig05-statistical-decision-procedure.svg)
+
+<!-- **Figure M1.** The statistical test-selection procedure shared by all four projects. Stop at the first "yes". The two rules at the foot override the whole tree: report the effect size alongside any p-value, and compute the minimum detectable effect at 80% power before running anything. -->
+
+
 ## 1. Study design
 
 A genome-annotation and curation study. No new biological material is generated. The unit of analysis is the **gene locus**; the unit of curation is the **channel-family assignment**. The design is paired (before/after) for the annotation-repair comparison and unpaired for the cross-species comparison.

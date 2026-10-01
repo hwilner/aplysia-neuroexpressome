@@ -46,6 +46,9 @@ It is explicitly not a new assembly, not a claim of completeness, and not a repl
 
 ---
 
+![**Figure 1.** Gene-model repair. **Top:** RefSeq Annotation Release 102 represents this genomic region as three disconnected models, with no intron continuity. **Bottom:** lifting the 2022 CNS transcriptome onto AplCal3.0 and repairing the resulting models produces a single continuous model across the same interval. **Lower:** the pre-registered pipeline, terminating in a curated, confidence-scored ion channel and plasticity-gene catalogue. No Release 102 model is deleted; displaced models move to a superseded track with the reason recorded.](docs/figures/fig01-gene-model-repair.svg)
+
+
 ## References for this introduction
 
 Susswein-primary work is marked with an asterisk. Full BibTeX entries for all cited works are in `references/bibliography.bib`.
