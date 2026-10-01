@@ -135,6 +135,9 @@ Statistical testing in a resource project is mostly about not overclaiming. The 
 
 **Learning the tools, gently.** [The Bioconductor book](https://bioconductor.org/help/books/) and [the R for Data Science book](https://r4ds.hadley.nz/) are both free online. [Rosalind](https://rosalind.info) teaches bioinformatics through puzzles.
 
+
+![Figure 1 — the same genomic region before and after repair](docs/figures/fig01-gene-model-repair.svg)
+
 ## 10. If you want to check the work rather than trust it
 
 Every claim in this programme is checkable. The pre-registered methods file is committed to the repository **before** any analysis is run, and a continuous-integration check fails the build if any analysis artefact appears with an earlier commit date. The timestamp is public evidence that the analysis was specified in advance.
