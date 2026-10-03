@@ -29,6 +29,18 @@ jobs:
           # image builds from a clean cache
           docker build --no-cache -t aplysia-neuroexpressome:nocache .
 
+      - name: Probe each environment separately
+        run: |
+          set -uo pipefail
+          # Each solve is a separate environment, so a failure names the
+          # ecosystem that caused it rather than one opaque transaction.
+          for env in bio r ips; do
+            echo "=== env: $env ==="
+            docker run --rm aplysia-neuroexpressome:test \
+              micromamba run -n "$env" bash -c 'echo "solvable and present"'
+          done
+        continue-on-error: true
+
       - name: Emit the tool manifest
         run: |
           set -euo pipefail

@@ -71,6 +71,48 @@ version beside every domain hit. If 5.70-102.0 is required, it installs from
 the InterProScan distribution rather than conda, at the cost of Java 11 and a
 much longer build.
 
+## Second attempt: three environments instead of one solve
+
+The first CI run of `build-image.yml` **failed** at the `docker build` step.
+The exact solver error could not be read back: the Actions log endpoint is
+unreachable from this sandbox (it returns 503 through the network proxy), and
+the check-run annotations carry no message. A local reproduction was also
+attempted with a standalone micromamba binary and failed for an unrelated
+environment reason — `conda-forge/noarch` repodata will not load through the
+sandbox proxy. So the precise conflict is not known.
+
+What is known is that a single `micromamba install` solving for all 26 packages
+at once spans three ecosystems that routinely conflict: bioconda's tool stack,
+the conda-forge R stack with Bioconductor, and InterProScan with its own
+pinned library tree. That layout was fragile by construction, whatever the
+specific message turned out to be.
+
+The image is therefore rebuilt as **three environments**, each solved
+separately:
+
+| Environment | Holds | Pins |
+|---|---|---|
+| `bio` | the tools: diamond, liftoff, BUSCO, HISAT2, samtools, HMMER, eggNOG-mapper, OrthoFinder, MAFFT, trimAl, IQ-TREE, TransDecoder, gffread, Biopython, Python | 15 |
+| `r` | the statistics: R 4.4, limma, edgeR, clusterProfiler, metafor, ggplot2, patchwork, rstatix, testthat | 9 |
+| `ips` | InterProScan 5.59-91.0 and OpenJDK 11, alone | 2 |
+
+Each solve is now small, and a failure names the ecosystem that caused it. CI
+probes each environment separately before running the whole manifest, so the
+next run reports which one broke rather than a single opaque transaction.
+
+Invocation becomes explicit:
+
+```bash
+micromamba run -n bio liftoff ...
+micromamba run -n r   Rscript -e 'library(limma)'
+micromamba run -n ips ./InterProScan.sh ...
+```
+
+**P01-01.2 is still blocked.** The image has still never built. This is a
+restructuring on a well-founded hypothesis about the failure mode, not a fix
+confirmed by a green build. The next CI run is the verification, and until it
+passes nothing in this project is reproducible.
+
 ## What a reviewer should take from this
 
 The image has never been built. The pins are verified to exist; the build is
@@ -89,3 +131,7 @@ however carefully it has been written.
   `materials-and-methods.md` and require the InterProScan version beside every
   catalogue domain hit. This was not in the original plan and should be added
   before the catalogue is built.
+- `materials-and-methods.md` §2.2 still describes a single environment. It
+  needs updating to the three-environment layout, and to InterProScan 5.59-91.0
+  in place of 5.70-102.0. That is a pre-registration amendment and must be
+  logged as a `deviation-log` issue, not edited silently.

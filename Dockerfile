@@ -6,17 +6,29 @@
 # Build:  docker build -t aplysia-neuroexpressome .
 # Digest: recorded in the repository README (subtask P01-01.4)
 #
-# Two stages: the builder carries compilers, the runtime does not, so the
-# shipped image carries no build toolchain.
+# THREE environments, not one, and that is deliberate.
 #
-# Pins were verified against the anaconda.org package API on 2026-10-03 and
-# corrected: 9 of the 26 original pins did not resolve. See
-# docs/P01-01-2-image-build.md for the verification table and what changed.
+# P01-01.2 failed its first CI build. The original Dockerfile solved for all
+# 25 packages in a single micromamba transaction, spanning bioconda, the R
+# stack from conda-forge, and InterProScan, which carries its own pinned
+# library tree. The exact solver error could not be read back (the log endpoint
+# is unreachable from the authoring sandbox), but a single solve across those
+# three ecosystems is fragile by construction and is the most likely cause.
+#
+# So the layout changed: `bio` for the tools, `r` for the statistics, and
+# InterProScan isolated in its own environment. Each solve is small. A failure
+# now names the ecosystem that caused it.
+#
+# ACTIVATIONS
+#   micromamba run -n bio  <cmd>    tools, InterProScan, orthology
+#   micromamba run -n r    <cmd>    limma, edgeR, clusterProfiler, metafor
+#   scripts/environment.sh          prints the pinned manifest for both
+#
+# Pins verified against the anaconda.org package API on 2026-10-03; the
+# corrections applied are listed in docs/P01-01-2-image-build.md.
 
 ARG MAMBA_VERSION="23.11"
-
-# ---------------------------------------------------------------- stage 1
-FROM mambaorg/micromamba:${MAMBA_VERSION} AS builder
+FROM mambaorg/micromamba:${MAMBA_VERSION}
 
 USER root
 SHELL ["/usr/local/bin/_entrypoint.sh", "/bin/bash", "-euo", "pipefail", "-c"]
@@ -24,8 +36,11 @@ SHELL ["/usr/local/bin/_entrypoint.sh", "/bin/bash", "-euo", "pipefail", "-c"]
 ENV MAMBA_ROOT_PREFIX=/opt/conda
 ENV MAMBA_DOCKERFILE_ACTIVATE=1
 
+# ---------------------------------------------------------------------
+# env: bio — the analysis tools
+# ---------------------------------------------------------------------
 # biopython 1.83 exists on conda-forge only; bioconda stops at 1.70
-RUN micromamba install -y -n base \
+RUN micromamba create -y -n bio \
         -c conda-forge -c bioconda \
         python=3.11 \
         biopython=1.83 \
@@ -34,47 +49,6 @@ RUN micromamba install -y -n base \
         busco=5.7.1 \
         hisat2=2.2.1 \
         samtools=1.19 \
-    && micromamba clean --all --yes
-
-# ---------------------------------------------------------------- stage 2
-FROM mambaorg/micromamba:${MAMBA_VERSION}
-
-USER root
-SHELL ["/usr/local/bin/_entrypoint.sh", "/bin/bash", "-euo", "pipefail", "-c"]
-
-ENV MAMBA_ROOT_PREFIX=/opt/conda
-ENV MAMBA_DOCKERFILE_ACTIVATE=1
-ENV PATH=/opt/conda/envs/base/bin:$PATH
-
-# Java 11 is required by InterProScan. Pinned, because an unpinned JRE has
-# broken InterProScan before.
-RUN micromamba install -y -n base -c conda-forge \
-        openjdk=11 \
-    && micromamba clean --all --yes
-
-# analysis tooling, pinned (P01 methods 2.2, corrected 2026-10-03)
-#
-# channel notes, all verified 2026-10-03:
-#   bioconductor-*      live on bioconda, not on conda-forge
-#   limma 3.60          does not exist; the channel goes 3.58.1 -> 3.62.0
-#   r-metafor           version string carries a _0 suffix: 4.4_0
-#   interproscan        bioconda's newest build is 5.59-91.0, not 5.70-102.0
-#   trimal              no .rev22 build; 1.5.1 is current
-#   aplotransdecoder    not a conda package; the tool ships as 'transdecoder'
-#   tabular             no such package; removed (it was never in the methods)
-RUN micromamba install -y -n base \
-        -c conda-forge -c bioconda \
-        python=3.11 \
-        r-base=4.4 \
-        bioconductor-limma=3.62.0 \
-        bioconductor-edger=4.0 \
-        bioconductor-clusterprofiler=4.10 \
-        r-metafor=4.4_0 \
-        r-ggplot2=3.5 \
-        r-patchwork=1.2 \
-        r-rstatix=0.7 \
-        r-testthat=3.2 \
-        interproscan=5.59_91.0 \
         hmmer=3.4 \
         eggnog-mapper=2.1.9 \
         orthofinder=2.5.4 \
@@ -85,17 +59,50 @@ RUN micromamba install -y -n base \
         gffread=0.9.9 \
     && micromamba clean --all --yes
 
-# Liftoff has no tagged release matching 1.3.0, so it installs from a pinned
-# commit. OrthoFinder is available as a tagged release.
+# ---------------------------------------------------------------------
+# env: r — the statistics
+# ---------------------------------------------------------------------
+# The Bioconductor packages live on bioconda, not conda-forge, and their
+# versions track the R release. limma 3.60 does not exist; the channel goes
+# 3.58.1 -> 3.62.0. r-metafor carries a _0 suffix: 4.4_0.
+RUN micromamba create -y -n r \
+        -c conda-forge -c bioconda \
+        r-base=4.4 \
+        bioconductor-limma=3.62.0 \
+        bioconductor-edger=4.0 \
+        bioconductor-clusterprofiler=4.10 \
+        r-metafor=4.4_0 \
+        r-ggplot2=3.5 \
+        r-patchwork=1.2 \
+        r-rstatix=0.7 \
+        r-testthat=3.2 \
+    && micromamba clean --all --yes
+
+# ---------------------------------------------------------------------
+# env: ips — InterProScan, isolated
+# ---------------------------------------------------------------------
+# bioconda's newest InterProScan build is 5.59-91.0, not 5.70-102.0. This is a
+# data-release change, not a cosmetic one: the version determines the Pfam and
+# InterPro member-database snapshot, so the methods must state it and the
+# catalogue must record it beside every domain hit. Java 11 is required and is
+# pinned for the same reason InterProScan is.
+RUN micromamba create -y -n ips \
+        -c conda-forge -c bioconda \
+        openjdk=11 \
+        interproscan=5.59_91.0 \
+    && micromamba clean --all --yes
+
+# ---------------------------------------------------------------------
+# Liftoff installs from a pinned commit: no tag matches 1.3.0.
+# ---------------------------------------------------------------------
 ARG LIFTOFF_COMMIT="b8a41b0"
-RUN pip install --no-cache-dir --no-deps \
-        "git+https://github.com/AdrienLegat/liftoff.git@${LIFTOFF_COMMIT}"
-RUN pip install --no-cache-dir --no-deps \
+RUN micromamba run -n bio pip install --no-cache-dir --no-deps \
+        "git+https://github.com/AdrienLegat/liftoff.git@${LIFTOFF_COMMIT}" \
+    && micromamba run -n bio pip install --no-cache-dir --no-deps \
         "git+https://github.com/Embl-EBI/OrthoFinder@2.5.4"
 
 COPY scripts/ /opt/aplysia/bin/
 RUN chmod +x /opt/aplysia/bin/*.sh 2>/dev/null || true
-ENV PATH=/opt/aplysia/bin:$PATH
 
 # data layout. data/raw is gitignored: inputs are large and are re-fetchable
 # from the accessions recorded in data/manifest.tsv.
@@ -105,6 +112,7 @@ RUN mkdir -p /workspace/data/raw /workspace/data/derived /workspace/results \
 USER $MAMBA_USER
 WORKDIR /workspace
 
+ENV PATH=/opt/aplysia/bin:$PATH
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PYTHONHASHSEED=0
 
@@ -112,15 +120,25 @@ ENV PYTHONHASHSEED=0
 RUN { \
       echo "# environment manifest - generated at image build time"; \
       echo "built: $(date -u +%Y-%m-%dT%H:%M:%SZ)"; \
-      for t in python diamond liftoff busco hisat2 samtools InterProScan.pl \
-               eggnog-mapper.pl mafft trimal iqtree2 gffread \
-               orthofinder TransDecoder.R R java; do \
-        v=$(command -v "$t" >/dev/null 2>&1 \
-            && ("$t" --version 2>&1 | head -1 || echo present) \
-            || echo "NOT FOUND"); \
+      echo; \
+      echo "## env: bio"; \
+      for t in python diamond liftoff busco hisat2 samtools hmmer-hsearch \
+               eggnog-mapper.pl mafft trimal iqtree2 gffread orthofinder \
+               TransDecoder.R; do \
+        v=$(micromamba run -n bio bash -c "command -v $t >/dev/null 2>&1 && ($t --version 2>&1 | head -1 || echo present) || echo 'NOT FOUND'"); \
         printf '%-22s %s\n' "$t" "$v"; \
       done; \
-      echo "r-base: $(R --version 2>&1 | head -1)"; \
+      echo; \
+      echo "## env: r"; \
+      micromamba run -n r Rscript -e 'cat("R ", R.version.string, "\n", sep=""); \
+        for (p in c("limma","edgeR","clusterProfiler","metafor","ggplot2","patchwork","rstatix","testthat")) \
+          cat(sprintf("%-22s %s\n", p, tryCatch(as.character(packageVersion(p)), error=function(e) "NOT FOUND")))' \
+        2>/dev/null || echo "R NOT FOUND"; \
+      echo; \
+      echo "## env: ips"; \
+      micromamba run -n ips bash -c 'java -version 2>&1 | head -1; \
+        printf "%-22s %s\n" InterProScan "$(InterProScan.sh -h 2>&1 | grep -i version | head -1 || echo present)"' \
+        2>/dev/null || echo "InterProScan NOT FOUND"; \
     } > /opt/aplysia/ENVIRONMENT.txt 2>&1 || true
 
 CMD ["/bin/bash"]
