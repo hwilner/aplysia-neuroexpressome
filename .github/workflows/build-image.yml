@@ -1,0 +1,82 @@
+name: build the analysis image
+
+# P01-01.2 — the build that cannot run in the authoring sandbox.
+#
+# This workflow exists because the environment used to write the Dockerfile has
+# no container runtime: no docker, podman, singularity or apptainer, and no
+# daemon socket. The build therefore runs here, on a runner that has one, and
+# the tool manifest is committed back as an artefact so the resolved versions
+# are inspectable without pulling the image.
+
+on:
+  push:
+    branches: [main]
+    paths: ['Dockerfile', '.github/workflows/build-image.yml']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          set -euo pipefail
+          # a plain, cached build: this is the check that every pin resolves
+          docker build -t aplysia-neuroexpressome:test .
+          # and a no-cache build, because P01-01.2 asks specifically whether the
+          # image builds from a clean cache
+          docker build --no-cache -t aplysia-neuroexpressome:nocache .
+
+      - name: Emit the tool manifest
+        run: |
+          set -euo pipefail
+          docker run --rm aplysia-neuroexpressome:test \
+            /opt/aplysia/bin/environment.sh > environment.txt
+          cat environment.txt
+
+      - name: Fail if any pinned tool is missing
+        run: |
+          set -euo pipefail
+          if grep -q 'NOT FOUND' environment.txt; then
+            echo "::error::A tool named in the Dockerfile is absent from the image:"
+            grep 'NOT FOUND' environment.txt
+            exit 1
+          fi
+          echo "OK: every tool named in the Dockerfile is present"
+
+      - name: Digest
+        run: |
+          set -euo pipefail
+          docker inspect --format='{{index .RepoDigests 0}}' \
+            aplysia-neuroexpressome:test 2>/dev/null \
+            || docker images --digests aplysia-neuroexpressome:test
+          docker image inspect --format='{{.Id}}' aplysia-neuroexpressome:test
+
+      - name: Upload the manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: environment-manifest
+          path: environment.txt
+          retention-days: 90
+
+      - name: Record the result
+        run: |
+          set -euo pipefail
+          {
+            echo "## P01-01.2 build result"
+            echo
+            echo "Built: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo
+            echo '```'
+            cat environment.txt
+            echo '```'
+          } > build-result.md
+
+      - name: Upload the build result
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-result
+          path: build-result.md
+          retention-days: 365

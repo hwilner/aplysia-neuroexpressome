@@ -4,10 +4,14 @@
 # a result produced outside this container is not a result we can reproduce.
 #
 # Build:  docker build -t aplysia-neuroexpressome .
-# Record: the image digest goes in the repository README (subtask P01-01.4)
+# Digest: recorded in the repository README (subtask P01-01.4)
 #
-# Subtask P01-01.1. Multi-stage: the builder carries compilers, the runtime
-# does not, so the shipped image carries no build toolchain.
+# Two stages: the builder carries compilers, the runtime does not, so the
+# shipped image carries no build toolchain.
+#
+# Pins were verified against the anaconda.org package API on 2026-10-03 and
+# corrected: 9 of the 26 original pins did not resolve. See
+# docs/P01-01-2-image-build.md for the verification table and what changed.
 
 ARG MAMBA_VERSION="23.11"
 
@@ -20,7 +24,9 @@ SHELL ["/usr/local/bin/_entrypoint.sh", "/bin/bash", "-euo", "pipefail", "-c"]
 ENV MAMBA_ROOT_PREFIX=/opt/conda
 ENV MAMBA_DOCKERFILE_ACTIVATE=1
 
-RUN micromamba install -y -n base -c conda-forge -c bioconda \
+# biopython 1.83 exists on conda-forge only; bioconda stops at 1.70
+RUN micromamba install -y -n base \
+        -c conda-forge -c bioconda \
         python=3.11 \
         biopython=1.83 \
         diamond=2.1.8 \
@@ -40,37 +46,53 @@ ENV MAMBA_ROOT_PREFIX=/opt/conda
 ENV MAMBA_DOCKERFILE_ACTIVATE=1
 ENV PATH=/opt/conda/envs/base/bin:$PATH
 
-# analysis tooling, pinned (P01 methods 2.2)
-RUN micromamba install -y -n base -c conda-forge -c bioconda \
+# Java 11 is required by InterProScan. Pinned, because an unpinned JRE has
+# broken InterProScan before.
+RUN micromamba install -y -n base -c conda-forge \
+        openjdk=11 \
+    && micromamba clean --all --yes
+
+# analysis tooling, pinned (P01 methods 2.2, corrected 2026-10-03)
+#
+# channel notes, all verified 2026-10-03:
+#   bioconductor-*      live on bioconda, not on conda-forge
+#   limma 3.60          does not exist; the channel goes 3.58.1 -> 3.62.0
+#   r-metafor           version string carries a _0 suffix: 4.4_0
+#   interproscan        bioconda's newest build is 5.59-91.0, not 5.70-102.0
+#   trimal              no .rev22 build; 1.5.1 is current
+#   aplotransdecoder    not a conda package; the tool ships as 'transdecoder'
+#   tabular             no such package; removed (it was never in the methods)
+RUN micromamba install -y -n base \
+        -c conda-forge -c bioconda \
         python=3.11 \
         r-base=4.4 \
-        bioconductor-limma=3.60 \
+        bioconductor-limma=3.62.0 \
         bioconductor-edger=4.0 \
-        bioconductor-clusterProfiler=4.10 \
-        r-metafor=4.4 \
+        bioconductor-clusterprofiler=4.10 \
+        r-metafor=4.4_0 \
         r-ggplot2=3.5 \
         r-patchwork=1.2 \
         r-rstatix=0.7 \
         r-testthat=3.2 \
-        interproscan=5.70-102.0 \
+        interproscan=5.59_91.0 \
         hmmer=3.4 \
         eggnog-mapper=2.1.9 \
         orthofinder=2.5.4 \
         mafft=7.505 \
-        trimal=1.4.rev22 \
+        trimal=1.5.1 \
         iqtree=2.2.6 \
-        applotransdecoder=3.0.0 \
+        transdecoder=5.7.0 \
         gffread=0.9.9 \
-        tabular=1.0 \
     && micromamba clean --all --yes
 
-# Liftoff and the annotation tools ship as git installs; pin the commit.
+# Liftoff has no tagged release matching 1.3.0, so it installs from a pinned
+# commit. OrthoFinder is available as a tagged release.
 ARG LIFTOFF_COMMIT="b8a41b0"
-ARG ORTHOFINDER_COMMIT=""
-RUN pip install --no-cache-dir --no-deps "git+https://github.com/AdrienLegat/liftoff.git@${LIFTOFF_COMMIT}" \
-    && pip install --no-cache-dir --no-deps "git+https://github.com/Embl-EBI/OrthoFinder@2.5.4"
+RUN pip install --no-cache-dir --no-deps \
+        "git+https://github.com/AdrienLegat/liftoff.git@${LIFTOFF_COMMIT}"
+RUN pip install --no-cache-dir --no-deps \
+        "git+https://github.com/Embl-EBI/OrthoFinder@2.5.4"
 
-# scripts the pipeline writes into $PATH at runtime
 COPY scripts/ /opt/aplysia/bin/
 RUN chmod +x /opt/aplysia/bin/*.sh 2>/dev/null || true
 ENV PATH=/opt/aplysia/bin:$PATH
@@ -88,13 +110,14 @@ ENV PYTHONHASHSEED=0
 
 # ---- tool manifest: printed on every run and captured in the log ---------
 RUN { \
-      echo "# environment manifest — generated at image build time"; \
+      echo "# environment manifest - generated at image build time"; \
       echo "built: $(date -u +%Y-%m-%dT%H:%M:%SZ)"; \
-      echo "base:  $(cat /opt/conda/conda-meta/history 2>/dev/null | head -1)"; \
       for t in python diamond liftoff busco hisat2 samtools InterProScan.pl \
-               eggnog-mapper.pl diamond mafft trimal iqtree2 gffread \
-               orthofinder applotransdecoder R; do \
-        v=$(command -v "$t" >/dev/null 2>&1 && ("$t" --version 2>&1 | head -1 || echo present)); \
+               eggnog-mapper.pl mafft trimal iqtree2 gffread \
+               orthofinder TransDecoder.R R java; do \
+        v=$(command -v "$t" >/dev/null 2>&1 \
+            && ("$t" --version 2>&1 | head -1 || echo present) \
+            || echo "NOT FOUND"); \
         printf '%-22s %s\n' "$t" "$v"; \
       done; \
       echo "r-base: $(R --version 2>&1 | head -1)"; \
