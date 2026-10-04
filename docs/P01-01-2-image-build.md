@@ -165,6 +165,39 @@ pasta are no longer in the transaction.
 Nothing short of an actual solve surfaces this. That is the argument for
 running the build in CI rather than reasoning about it.
 
+## Fourth attempt: down to one pin, then stopping
+
+After pinning the Bioconductor 3.20 pair, the whole R stack resolves —
+`r-base 4.4` with `limma 3.62.0` and `edgeR 4.4.0` — and the `r` environment
+is down to a single package:
+
+```
+r-metafor =4.4.0 is not installable because there are no viable options
+r-metafor 4.4_0 would require        <- requirement not expanded in the log
+```
+
+The solver names the package and prints a "would require" line with nothing
+after it. That is the limit of what the log gives, and guessing at a version
+would be exactly the wrong move: five CI cycles have already gone into this
+subtask, three of them into problems other than the real one.
+
+**So this tick stops here, honestly.** Current verified state:
+
+| Environment | Status |
+|---|---|
+| `bio` — 12 pins | **solves** |
+| `tree` — 3 pins | **solves** |
+| `ips` — 2 pins | **solves** |
+| `r` — 8 pins | one pin remaining: `r-metafor` |
+
+The `solve-check` job now runs `micromamba repoquery depends` on the three
+pins in question, so the next run states metafor's actual requirement as a fact
+rather than a hypothesis. That is the difference between this being stuck and
+this being known.
+
+**P01-01.2 is still Blocked.** Three of four environments are proven; the image
+is not built. Nothing in this project is reproducible until it is.
+
 ## What a reviewer should take from this
 
 The image has never been built. The pins are verified to exist; the build is
