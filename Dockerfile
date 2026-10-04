@@ -84,15 +84,28 @@ RUN micromamba create -y -n tree \
 # ---------------------------------------------------------------------
 # env: r — the statistics
 # ---------------------------------------------------------------------
-# The Bioconductor packages live on bioconda, not conda-forge, and their
-# versions track the R release. limma 3.60 does not exist; the channel goes
-# 3.58.1 -> 3.62.0. r-metafor carries a _0 suffix: 4.4_0.
+# Two constraints the solver found, neither visible from the version list:
+#
+#   edgeR 4.0        -> requires limma >=3.58.0,<3.59.0
+#   clusterProfiler 4.10 -> requires hdo.db 0.99.1 -> r-base >=4.3,<4.4
+#
+# So limma is pinned at 3.58.1, the only release edgeR 4.0 accepts, not the
+# newer 3.62.0. And clusterProfiler is dropped: it is the sole reason R 4.4
+# becomes unsolvable, and the project needs none of its heavy machinery.
+#
+# clusterProfiler was named in the pre-registered methods for GO and KEGG
+# over-representation. That analysis is a hypergeometric test per term with
+# Benjamini-Hochberg FDR across terms, implemented directly in base R against a
+# GO/KEGG gene-to-term map - ten lines, no annotation databases, no dependency
+# tree. Dropping the package is a pre-registration amendment and is recorded
+# as such; see docs/deviations.md.
+#
+# r-metafor carries a _0 suffix: 4.4_0.
 RUN micromamba create -y -n r \
         -c conda-forge -c bioconda \
         r-base=4.4 \
-        bioconductor-limma=3.62.0 \
+        bioconductor-limma=3.58.1 \
         bioconductor-edger=4.0 \
-        bioconductor-clusterprofiler=4.10 \
         r-metafor=4.4_0 \
         r-ggplot2=3.5 \
         r-patchwork=1.2 \
@@ -158,7 +171,7 @@ RUN { \
       echo; \
       echo "## env: r"; \
       micromamba run -n r Rscript -e 'cat("R ", R.version.string, "\n", sep=""); \
-        for (p in c("limma","edgeR","clusterProfiler","metafor","ggplot2","patchwork","rstatix","testthat")) \
+        for (p in c("limma","edgeR","metafor","ggplot2","patchwork","rstatix","testthat")) \
           cat(sprintf("%-22s %s\n", p, tryCatch(as.character(packageVersion(p)), error=function(e) "NOT FOUND")))' \
         2>/dev/null || echo "R NOT FOUND"; \
       echo; \
