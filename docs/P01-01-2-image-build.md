@@ -130,6 +130,41 @@ but the pins have still never been through a solver. The next CI run is the
 first real test of the 26 pins, and until it passes nothing in this project is
 reproducible.
 
+## Third attempt: the real conflict, found by the solver
+
+With the base image fixed, the third CI build reached the solver and failed
+with a genuine conflict:
+
+```
+├─ busco =5.7.1 * is installable and it requires
+│  └─ sepp >=4.3.10 *, which requires
+│     └─ pasta =* *, which requires
+│        └─ mafft >=7.526,<8.0a0 *, which can be installed;
+└─ mafft =7.505 * is not installable because it conflicts with any installable versions previously reported.
+```
+
+BUSCO pulls `sepp`, which pulls `pasta`, which requires **mafft >= 7.526**. And
+the newest mafft on bioconda is **7.525** — one patch below. So no mafft
+satisfies both a BUSCO pin and a mafft pin. The conflict is structural, not a
+bad version choice, and no amount of version-shopping fixes it.
+
+**Fix: a fourth environment.** The tree tools now live in their own:
+
+| Environment | Holds | Pins |
+|---|---|---|
+| `bio` | tools, alignment, orthology, BUSCO | 12 |
+| `tree` | MAFFT 7.525, trimAl 1.5.1, IQ-TREE 2.2.6 | 3 |
+| `r` | limma, edgeR, clusterProfiler, metafor, plotting | 9 |
+| `ips` | InterProScan 5.59-91.0, OpenJDK 11 | 2 |
+
+Every pin survives, including `mafft=7.525`, which solves cleanly once sepp and
+pasta are no longer in the transaction.
+
+**The diagnosis was only obtainable by solving.** `mafft=7.505` exists, and
+`7.525` exists, and every pin verifies individually against the package index.
+Nothing short of an actual solve surfaces this. That is the argument for
+running the build in CI rather than reasoning about it.
+
 ## What a reviewer should take from this
 
 The image has never been built. The pins are verified to exist; the build is
@@ -152,6 +187,11 @@ however carefully it has been written.
   micromamba version, and InterProScan 5.70-102.0. All three are now wrong. The
   correction is a pre-registration amendment and must be logged as a
   `deviation-log` issue, not edited silently.
-- **Lesson worth carrying:** a base image tag is a version pin like any other,
-  and `ARG` makes an invented value look like a configured one. Pin the base
-  image against the registry, in CI, before the first build.
+- **Lesson worth carrying, three of them.** A base image tag is a version pin
+  like any other, and `ARG` makes an invented value look like a configured one.
+  A package existing and a package resolving are different questions. And a
+  cross-package dependency can be unsatisfiable no matter what versions you
+  choose, which is the one failure that only a solver can find.
+- `build-image.yml` now runs a `solve-check` job first: each environment is
+  solved in its own step on a bare runner, with no Docker, so a conflict names
+  the ecosystem and prints the solver's message. The image build waits on it.

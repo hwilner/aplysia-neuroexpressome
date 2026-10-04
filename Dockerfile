@@ -6,7 +6,7 @@
 # Build:  docker build -t aplysia-neuroexpressome .
 # Digest: recorded in the repository README (subtask P01-01.4)
 #
-# THREE environments, not one, and that is deliberate.
+# FOUR environments, not one, and two of the separations are forced.
 #
 # P01-01.2 failed its first CI build. The original Dockerfile solved for all
 # 25 packages in a single micromamba transaction, spanning bioconda, the R
@@ -25,9 +25,11 @@
 # better diagnostics - not because it was shown to be necessary.
 #
 # ACTIVATIONS
-#   micromamba run -n bio  <cmd>    tools, InterProScan, orthology
+#   micromamba run -n bio  <cmd>    tools, alignment, orthology, BUSCO
+#   micromamba run -n tree <cmd>    MAFFT, trimAl, IQ-TREE
 #   micromamba run -n r    <cmd>    limma, edgeR, clusterProfiler, metafor
-#   scripts/environment.sh          prints the pinned manifest for both
+#   micromamba run -n ips  <cmd>    InterProScan
+#   scripts/environment.sh          prints the pinned manifest for all four
 #
 # Pins verified against the anaconda.org package API on 2026-10-03; the
 # corrections applied are listed in docs/P01-01-2-image-build.md.
@@ -57,11 +59,26 @@ RUN micromamba create -y -n bio \
         hmmer=3.4 \
         eggnog-mapper=2.1.9 \
         orthofinder=2.5.4 \
-        mafft=7.505 \
-        trimal=1.5.1 \
-        iqtree=2.2.6 \
         transdecoder=5.7.0 \
         gffread=0.9.9 \
+    && micromamba clean --all --yes
+
+# ---------------------------------------------------------------------
+# env: tree — the phylogeny tools
+# ---------------------------------------------------------------------
+# mafft is isolated here, not because it is big, but because it cannot
+# coexist with BUSCO. BUSCO 5.7.1 pulls sepp >=4.3.10, which pulls pasta,
+# which requires mafft >=7.526. The newest mafft on bioconda is 7.525 - one
+# patch below. So there is no mafft that satisfies both a BUSCO pin and a
+# mafft pin, and the conflict is structural rather than a bad version.
+# Splitting the tree tools out keeps every pin intact and the solve small.
+# This was found by the CI solver, not by inspection: the package exists and
+# the version resolves, so only an actual solve reveals it.
+RUN micromamba create -y -n tree \
+        -c conda-forge -c bioconda \
+        mafft=7.525 \
+        trimal=1.5.1 \
+        iqtree=2.2.6 \
     && micromamba clean --all --yes
 
 # ---------------------------------------------------------------------
@@ -128,9 +145,14 @@ RUN { \
       echo; \
       echo "## env: bio"; \
       for t in python diamond liftoff busco hisat2 samtools hmmer-hsearch \
-               eggnog-mapper.pl mafft trimal iqtree2 gffread orthofinder \
-               TransDecoder.R; do \
+               eggnog-mapper.pl gffread orthofinder TransDecoder.R; do \
         v=$(micromamba run -n bio bash -c "command -v $t >/dev/null 2>&1 && ($t --version 2>&1 | head -1 || echo present) || echo 'NOT FOUND'"); \
+        printf '%-22s %s\n' "$t" "$v"; \
+      done; \
+      echo; \
+      echo "## env: tree"; \
+      for t in mafft trimal iqtree2; do \
+        v=$(micromamba run -n tree bash -c "command -v $t >/dev/null 2>&1 && ($t --version 2>&1 | head -1 || echo present) || echo 'NOT FOUND'"); \
         printf '%-22s %s\n' "$t" "$v"; \
       done; \
       echo; \
