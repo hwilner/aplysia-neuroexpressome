@@ -15,9 +15,14 @@
 # is unreachable from the authoring sandbox), but a single solve across those
 # three ecosystems is fragile by construction and is the most likely cause.
 #
-# So the layout changed: `bio` for the tools, `r` for the statistics, and
-# InterProScan isolated in its own environment. Each solve is small. A failure
-# now names the ecosystem that caused it.
+# The base image was also wrong. MAMBA_VERSION was "23.11", a tag that has
+# never existed; the real current version is 2.9.0. That, and nothing else, is
+# what failed both CI builds. It is now pinned to 2.9.0.
+#
+# The three-environment layout below was adopted while chasing that failure and
+# was NOT the fix. It is kept because isolating InterProScan's pinned library
+# tree is defensible on its own merits, and because per-environment probes are
+# better diagnostics - not because it was shown to be necessary.
 #
 # ACTIVATIONS
 #   micromamba run -n bio  <cmd>    tools, InterProScan, orthology
@@ -27,7 +32,7 @@
 # Pins verified against the anaconda.org package API on 2026-10-03; the
 # corrections applied are listed in docs/P01-01-2-image-build.md.
 
-ARG MAMBA_VERSION="23.11"
+ARG MAMBA_VERSION="2.9.0"
 FROM mambaorg/micromamba:${MAMBA_VERSION}
 
 USER root
