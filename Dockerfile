@@ -84,14 +84,20 @@ RUN micromamba create -y -n tree \
 # ---------------------------------------------------------------------
 # env: r — the statistics
 # ---------------------------------------------------------------------
-# Two constraints the solver found, neither visible from the version list:
+# Three constraints the solver found, none visible from the version list:
 #
-#   edgeR 4.0        -> requires limma >=3.58.0,<3.59.0
-#   clusterProfiler 4.10 -> requires hdo.db 0.99.1 -> r-base >=4.3,<4.4
+#   limma 3.58.1 (Bioc 3.18)  -> requires r-base < 4.4
+#   edgeR 4.0   (Bioc 3.18)   -> requires limma >=3.58.0,<3.59.0
+#   clusterProfiler 4.10       -> requires hdo.db 0.99.1 -> r-base >=4.3,<4.4
 #
-# So limma is pinned at 3.58.1, the only release edgeR 4.0 accepts, not the
-# newer 3.62.0. And clusterProfiler is dropped: it is the sole reason R 4.4
-# becomes unsolvable, and the project needs none of its heavy machinery.
+# limma and edgeR are Bioconductor 3.20 packages, the generation built for
+# R 4.4, and the pair must be taken from the same generation. edgeR 4.0 is
+# the 3.18 generation and requires limma 3.58.x, which in turn requires
+# r-base < 4.4. The 3.20 pair is limma 3.62.0 with edgeR 4.4.0, and that is
+# what is pinned, which keeps the pre-registered R 4.4 intact.
+#
+# clusterProfiler is dropped. It is the sole reason R 4.4 becomes
+# unsolvable, and the project needs none of its heavy machinery.
 #
 # clusterProfiler was named in the pre-registered methods for GO and KEGG
 # over-representation. That analysis is a hypergeometric test per term with
@@ -104,8 +110,8 @@ RUN micromamba create -y -n tree \
 RUN micromamba create -y -n r \
         -c conda-forge -c bioconda \
         r-base=4.4 \
-        bioconductor-limma=3.58.1 \
-        bioconductor-edger=4.0 \
+        bioconductor-limma=3.62.0 \
+        bioconductor-edger=4.4.0 \
         r-metafor=4.4_0 \
         r-ggplot2=3.5 \
         r-patchwork=1.2 \

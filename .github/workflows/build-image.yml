@@ -42,7 +42,7 @@ jobs:
 
       - name: env r
         run: micromamba create -y -n r -c conda-forge -c bioconda \
-              r-base=4.4 bioconductor-limma=3.58.1 bioconductor-edger=4.0 \
+              r-base=4.4 bioconductor-limma=3.62.0 bioconductor-edger=4.4.0 \
               r-metafor=4.4_0 r-ggplot2=3.5 r-patchwork=1.2 r-rstatix=0.7 r-testthat=3.2
 
       # every env is tested even if an earlier one failed, so one run reports
