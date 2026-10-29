@@ -136,6 +136,13 @@ jobs:
       - name: Fail if any pinned tool is missing
         run: |
           set -euo pipefail
+          # The helper prints this when the image has no manifest at all.
+          # That is a manifest stage that failed, not a manifest that is
+          # empty, and it has to be reported as what it is.
+          if grep -q 'no manifest' environment.txt; then
+            echo "::error::The image has no tool manifest. The manifest stage did not run."
+            exit 1
+          fi
           # An empty manifest means the manifest stage did not run, and an
           # empty manifest passes every check below it.
           if [ ! -s environment.txt ]; then

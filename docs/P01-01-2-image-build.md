@@ -298,6 +298,46 @@ the remaining drift: every environment the Dockerfile solves has a section in
 the manifest, and every manifest section belongs to an environment that is
 solved.
 
+### The manifest stage could not write the manifest
+
+The image built on 2026-10-29, for the first time in this project's history,
+and all four environments probed cleanly inside it. The manifest stage did
+not run, and the build did not notice.
+
+The Dockerfile switches to the unprivileged user before the manifest stage,
+and `/opt/aplysia` is created by `COPY` as root and stays root-owned. The
+manifest stage writes its output with a redirect into that directory, so it
+failed:
+
+```
+/bin/bash: line 1: /opt/aplysia/ENVIRONMENT.txt: Permission denied
+```
+
+The `|| true` at the end of the stage swallowed that error, the stage
+reported `DONE`, and the image shipped with no manifest at all.
+
+The manifest gate did not catch it, because the gate only looked for the
+string `NOT FOUND`. An image with no manifest produces the helper's fallback
+message instead,
+
+```
+no manifest: the image was not built with the manifest stage
+```
+
+and that message contains no `NOT FOUND`, so the gate reported "OK: every
+tool named in the Dockerfile is present" on an image in which not one tool had
+been looked for.
+
+**Fix:** `/opt/aplysia` is given to the unprivileged user, so the manifest
+stage can write the manifest it exists to write; and the gate now fails on
+the missing-manifest message, on an empty manifest, and on a manifest with no
+section for an environment the Dockerfile defines.
+
+This is the fifth defect, and it is the one that shows what the other four
+were worth: the image was building correctly while the gate was lying about
+it. A gate that only looks for one string is a gate that reports on the
+tools it happens to know about and stays silent about everything else.
+
 ### What this attempt does and does not establish
 
 It establishes that **all four environments solve**, each one checked with the
@@ -306,10 +346,10 @@ manifest checks commands the packages actually ship, and that the manifest
 gate no longer passes on an empty manifest or on a manifest that is missing
 an environment.
 
-It does **not** establish that the image builds. The build itself has never
-run: the first build attempt was blocked behind a solve that never passed.
-The next CI run is still the first real test of the image, and until that run
-is green, nothing in this project is reproducible.
+It does **not** establish that the image builds. The build itself had never
+run when this section was written: the first build attempt was blocked behind
+a solve that never passed. The next CI run is the first real test of the
+image, and until that run is green, nothing in this project is reproducible.
 
 ## What a reviewer should take from this
 

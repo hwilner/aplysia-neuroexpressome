@@ -172,6 +172,11 @@ RUN micromamba create -y -n ips \
 
 COPY scripts/ /opt/aplysia/bin/
 RUN chmod +x /opt/aplysia/bin/*.sh 2>/dev/null || true
+# The manifest is written by the unprivileged user the image runs as, so the
+# directory has to belong to that user. Without this the manifest stage fails
+# with "Permission denied", the redirect in that stage swallows the error, and
+# the image ships with no manifest at all.
+RUN chown -R $MAMBA_USER:$MAMBA_USER /opt/aplysia
 
 # data layout. data/raw is gitignored: inputs are large and are re-fetchable
 # from the accessions recorded in data/manifest.tsv.
