@@ -106,13 +106,27 @@ RUN micromamba create -y -n tree \
 # tree. Dropping the package is a pre-registration amendment and is recorded
 # as such; see docs/deviations.md.
 #
-# r-metafor carries a _0 suffix: 4.4_0.
+# metafor 4.4_0 cannot be installed alongside R 4.4. The package has two
+# builds, one for r-base >=4.2,<4.3 and one for r-base >=4.3,<4.4, and no
+# build that accepts R 4.4, so the solver rejects the pair outright. metafor
+# 4.6_0 has an r44 build, and it is the version pinned here. The
+# pre-registration names R 4.4.x and names no metafor version, so this does
+# not change the pre-registered R.
+#
+# r-metafor carries a _0 suffix: 4.6_0.
+#
+# lme4 and tidyverse are named in the pre-registered software environment
+# (materials-and-methods.md section 2.2) and were missing from the image.
+# lme4 is the mixed-effects model that step 1 of the pre-registered
+# test-selection procedure calls for when the observations are not independent.
 RUN micromamba create -y -n r \
         -c conda-forge -c bioconda \
         r-base=4.4 \
         bioconductor-limma=3.62.0 \
         bioconductor-edger=4.4.0 \
-        r-metafor=4.4_0 \
+        r-metafor=4.6_0 \
+        r-lme4=2.0_6 \
+        r-tidyverse=2.0.0 \
         r-ggplot2=3.5 \
         r-patchwork=1.2 \
         r-rstatix=0.7 \
@@ -177,7 +191,7 @@ RUN { \
       echo; \
       echo "## env: r"; \
       micromamba run -n r Rscript -e 'cat("R ", R.version.string, "\n", sep=""); \
-        for (p in c("limma","edgeR","metafor","ggplot2","patchwork","rstatix","testthat")) \
+        for (p in c("limma","edgeR","metafor","lme4","tidyverse","ggplot2","patchwork","rstatix","testthat")) \
           cat(sprintf("%-22s %s\n", p, tryCatch(as.character(packageVersion(p)), error=function(e) "NOT FOUND")))' \
         2>/dev/null || echo "R NOT FOUND"; \
       echo; \
