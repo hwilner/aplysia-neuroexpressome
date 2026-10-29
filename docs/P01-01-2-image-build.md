@@ -198,6 +198,119 @@ this being known.
 **P01-01.2 is still Blocked.** Three of four environments are proven; the image
 is not built. Nothing in this project is reproducible until it is.
 
+## Fifth attempt: the requirement as a fact, and three more names that were wrong
+
+The fourth attempt stopped because the log did not say why `r-metafor` could
+not be installed. It does say why; the log was just being read wrongly.
+
+### The requirement was in the package index all along
+
+`micromamba repoquery depends <pin> --json` reports the builds a pin resolves
+to and the constraint each build carries. The plain text output of the same
+command is the solver's progress log, and the step that was meant to answer
+this question piped that text through `head -25`, which cut the answer off
+before it appeared. The step was therefore reporting nothing at all, which is
+why the requirement looked unavailable.
+
+Asked directly, the answer is one line:
+
+```
+$ micromamba repoquery depends r-metafor=4.4_0 --json | scripts/requirements.py
+  r-metafor 4.4_0 [r43hc72bb7e_0]
+      requires r-base >=4.3,<4.4.0a0
+      requires r-mathjaxr
+      ...
+```
+
+`r-metafor 4.4_0` has exactly two builds on conda-forge: one for `r-base
+>=4.2,<4.3` and one for `r-base >=4.3,<4.4`. **Neither accepts R 4.4**, so
+the pin and the pre-registered R cannot coexist, and no reordering of the
+other pins will help. `r-metafor 4.6_0` has a third build,
+`r44hc72bb7e_1`, which requires `r-base >=4.4,<4.5.0a0` and therefore does.
+
+**Fix:** `r-metafor=4.6_0`. The pre-registration names R 4.4.x and names no
+metafor version, so the pre-registered R is unchanged and this is not a
+pre-registration amendment. The whole R environment now solves, with `r-base
+4.4.3`, `limma 3.62.0` and `edgeR 4.4.0` exactly as before.
+
+Two tools that the pre-registered software environment names and the image
+did not have are now in it: `lme4`, which is the mixed-effects model that
+step 1 of the pre-registered test-selection procedure calls for when the
+observations are not independent, and `tidyverse`.
+
+### Three more tool names, and one that reported nothing
+
+With the pins fixed, the image build itself was still going to fail, for
+reasons that had nothing to do with the pins.
+
+**The manifest checked four commands that the packages do not ship.** The
+manifest is the build's own check that every tool is in the image, so a
+command name that does not exist reports a missing tool and fails the build
+on a tool that is present under a different name:
+
+| Checked | Actually shipped | By |
+|---|---|---|
+| `hmmer-hsearch` | `hmmsearch` | `hmmer 3.4` |
+| `eggnog-mapper.pl` | `emapper.py` | `eggnog-mapper 2.1.9` |
+| `TransDecoder.R` | `TransDecoder.Predict` | `transdecoder 5.7.0` |
+| `InterProScan.sh` | `interproscan.sh` | `interproscan 5.59_91.0` |
+
+The first three would have failed the build with "a tool named in the
+Dockerfile is absent from the image". The fourth was worse: the `ips` section
+of the manifest ran `InterProScan.sh -h` inside a `$(...)`, so a missing
+command produced an empty version string rather than a `NOT FOUND`, and the
+check passed on a tool that was never there. All four names are now the ones
+the packages install, and the `ips` section checks presence with the same
+`command -v` guard as every other environment.
+
+**The git checkouts could not be installed at all.** The Dockerfile installed
+Liftoff and OrthoFinder with `pip install git+https://...`, which needs a
+`git` binary to clone. There is none: the published base image
+`mambaorg/micromamba:2.9.0` contains no `git` executable in any of its
+layers, and `git` is not a dependency of any package in the `bio` environment
+either. The layers would have failed with `git: command not found`.
+
+Both tools are on bioconda at exactly the pinned versions, so the git
+checkouts were never needed:
+
+| Tool | bioconda package | Provenance |
+|---|---|---|
+| `liftoff 1.3.0` | `noarch/liftoff-1.3.0-py_0` | built from the upstream `Liftoff-1.3.0` PyPI source distribution; declares `biopython`, `gffutils`, `interlap`, `minimap2`, `networkx`, `numpy`, `pyfaidx`, `pysam`; installs the `liftoff` console script |
+| `orthofinder 2.5.4` | `noarch/orthofinder-2.5.4-hdfd78af_0` | the upstream 2.5.4 release; installs `bin/orthofinder` and `bin/scripts_of/` |
+
+The git checkouts were also installed with `--no-deps`, which is the runtime
+drift risk this file already recorded under "Known risk": the conda package
+declares its dependencies, the git checkout left them to the solver. The
+conda packages are now used directly.
+
+### The environment list is now read from the Dockerfile
+
+`build-image.yml` repeated the pins of all four environments by hand, and
+probed three of them: the `tree` environment, added on 2026-10-04, was
+solved but never probed. Two lists that have to be kept in step by hand are
+two lists that will drift.
+
+`scripts/environments.py` now parses the `micromamba create` instructions out
+of the Dockerfile, and the workflow solves and probes exactly what it finds
+there. An environment cannot be added to the image and then left out of the
+checks, because there is only one list. `tests/test_environments.py` guards
+the remaining drift: every environment the Dockerfile solves has a section in
+the manifest, and every manifest section belongs to an environment that is
+solved.
+
+### What this attempt does and does not establish
+
+It establishes that **all four environments solve**, each one checked with the
+solver, with the pins taken from the Dockerfile. It establishes that the
+manifest checks commands the packages actually ship, and that the manifest
+gate no longer passes on an empty manifest or on a manifest that is missing
+an environment.
+
+It does **not** establish that the image builds. The build itself has never
+run: the first build attempt was blocked behind a solve that never passed.
+The next CI run is still the first real test of the image, and until that run
+is green, nothing in this project is reproducible.
+
 ## What a reviewer should take from this
 
 The image has never been built. The pins are verified to exist; the build is
@@ -205,6 +318,12 @@ wired to run on every push to `main`; and the first CI run is the real
 verification. Until that run is green, no result in this project should be
 treated as reproducible, and the Dockerfile should be treated as unverified
 however carefully it has been written.
+
+Four rounds of work went into the pins and none of them into the three
+things that would have failed the build once the pins were right: the
+manifest's four wrong command names, the git checkouts, and the `tree`
+environment that was never probed. A build that is red tells you about the
+first thing that is wrong. It does not tell you how many things are.
 
 ## Next
 
@@ -226,5 +345,5 @@ however carefully it has been written.
   cross-package dependency can be unsatisfiable no matter what versions you
   choose, which is the one failure that only a solver can find.
 - `build-image.yml` now runs a `solve-check` job first: each environment is
-  solved in its own step on a bare runner, with no Docker, so a conflict names
+  solved in its own job on a bare runner, with no Docker, so a conflict names
   the ecosystem and prints the solver's message. The image build waits on it.

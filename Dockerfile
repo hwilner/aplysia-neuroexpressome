@@ -27,9 +27,19 @@
 # ACTIVATIONS
 #   micromamba run -n bio  <cmd>    tools, alignment, orthology, BUSCO
 #   micromamba run -n tree <cmd>    MAFFT, trimAl, IQ-TREE
-#   micromamba run -n r    <cmd>    limma, edgeR, clusterProfiler, metafor
+#   micromamba run -n r    <cmd>    limma, edgeR, metafor, lme4, tidyverse
 #   micromamba run -n ips  <cmd>    InterProScan
-#   scripts/environment.sh          prints the pinned manifest for all four
+#   scripts/environment.sh          prints the pinned manifest
+#
+# Every tool is installed from a pinned conda package. An earlier revision
+# installed Liftoff and OrthoFinder from git checkouts instead. That could not
+# work: the base image carries no git, and neither does the bio environment,
+# so `pip install git+https://...` had no way to clone. Both tools are on
+# bioconda at exactly the pinned versions - liftoff 1.3.0 is the upstream
+# Liftoff-1.3.0 release built from the PyPI source distribution, and
+# OrthoFinder 2.5.4 is the upstream 2.5.4 release - and the conda packages
+# declare the dependencies that the git checkouts, installed with --no-deps,
+# left to the solver. See docs/P01-01-2-image-build.md.
 #
 # Pins verified against the anaconda.org package API on 2026-10-03; the
 # corrections applied are listed in docs/P01-01-2-image-build.md.
@@ -106,13 +116,27 @@ RUN micromamba create -y -n tree \
 # tree. Dropping the package is a pre-registration amendment and is recorded
 # as such; see docs/deviations.md.
 #
-# r-metafor carries a _0 suffix: 4.4_0.
+# metafor 4.4_0 cannot be installed alongside R 4.4. The package has two
+# builds, one for r-base >=4.2,<4.3 and one for r-base >=4.3,<4.4, and no
+# build that accepts R 4.4, so the solver rejects the pair outright. metafor
+# 4.6_0 has an r44 build, and it is the version pinned here. The
+# pre-registration names R 4.4.x and names no metafor version, so this does
+# not change the pre-registered R.
+#
+# r-metafor carries a _0 suffix: 4.6_0.
+#
+# lme4 and tidyverse are named in the pre-registered software environment
+# (materials-and-methods.md section 2.2) and were missing from the image.
+# lme4 is the mixed-effects model that step 1 of the pre-registered
+# test-selection procedure calls for when observations are not independent.
 RUN micromamba create -y -n r \
         -c conda-forge -c bioconda \
         r-base=4.4 \
         bioconductor-limma=3.62.0 \
         bioconductor-edger=4.4.0 \
-        r-metafor=4.4_0 \
+        r-metafor=4.6_0 \
+        r-lme4=2.0_6 \
+        r-tidyverse=2.0.0 \
         r-ggplot2=3.5 \
         r-patchwork=1.2 \
         r-rstatix=0.7 \
@@ -134,13 +158,17 @@ RUN micromamba create -y -n ips \
     && micromamba clean --all --yes
 
 # ---------------------------------------------------------------------
-# Liftoff installs from a pinned commit: no tag matches 1.3.0.
+# Liftoff and OrthoFinder come from bioconda, pinned above.
+#
+# An earlier revision installed both from git checkouts, Liftoff at commit
+# b8a41b0 and OrthoFinder at tag 2.5.4, with --no-deps. That could not work:
+# the base image mambaorg/micromamba:2.9.0 carries no git binary, and git is
+# not a dependency of any package in the bio environment either, so pip had no
+# way to clone either repository. bioconda publishes liftoff 1.3.0, built from
+# the upstream Liftoff-1.3.0 source distribution, and orthofinder 2.5.4, the
+# upstream 2.5.4 release; both provide the commands the manifest checks
+# (liftoff and orthofinder) and both declare their own dependencies.
 # ---------------------------------------------------------------------
-ARG LIFTOFF_COMMIT="b8a41b0"
-RUN micromamba run -n bio pip install --no-cache-dir --no-deps \
-        "git+https://github.com/AdrienLegat/liftoff.git@${LIFTOFF_COMMIT}" \
-    && micromamba run -n bio pip install --no-cache-dir --no-deps \
-        "git+https://github.com/Embl-EBI/OrthoFinder@2.5.4"
 
 COPY scripts/ /opt/aplysia/bin/
 RUN chmod +x /opt/aplysia/bin/*.sh 2>/dev/null || true
@@ -158,13 +186,25 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PYTHONHASHSEED=0
 
 # ---- tool manifest: printed on every run and captured in the log ---------
+#
+# The names below are the commands the pinned packages actually install, and
+# they have to be: a name that the package does not ship reads as "NOT
+# FOUND", and the build then fails on a tool that is present under a
+# different name. Four were wrong before: hmmer ships hmmsearch, not
+# hmmer-hsearch; eggnog-mapper ships emapper.py, not eggnog-mapper.pl;
+# transdecoder ships TransDecoder.Predict, not TransDecoder.R; and the
+# interproscan package ships interproscan.sh, not InterProScan.sh.
+#
+# InterProScan is checked for presence only. Running it needs the member
+# databases, which the conda package does not ship, and the check is about
+# the command being installed.
 RUN { \
       echo "# environment manifest - generated at image build time"; \
       echo "built: $(date -u +%Y-%m-%dT%H:%M:%SZ)"; \
       echo; \
       echo "## env: bio"; \
-      for t in python diamond liftoff busco hisat2 samtools hmmer-hsearch \
-               eggnog-mapper.pl gffread orthofinder TransDecoder.R; do \
+      for t in python diamond liftoff busco hisat2 samtools hmmsearch \
+               emapper.py gffread orthofinder TransDecoder.Predict; do \
         v=$(micromamba run -n bio bash -c "command -v $t >/dev/null 2>&1 && ($t --version 2>&1 | head -1 || echo present) || echo 'NOT FOUND'"); \
         printf '%-22s %s\n' "$t" "$v"; \
       done; \
@@ -177,14 +217,15 @@ RUN { \
       echo; \
       echo "## env: r"; \
       micromamba run -n r Rscript -e 'cat("R ", R.version.string, "\n", sep=""); \
-        for (p in c("limma","edgeR","metafor","ggplot2","patchwork","rstatix","testthat")) \
+        for (p in c("limma","edgeR","metafor","lme4","tidyverse","ggplot2","patchwork","rstatix","testthat")) \
           cat(sprintf("%-22s %s\n", p, tryCatch(as.character(packageVersion(p)), error=function(e) "NOT FOUND")))' \
         2>/dev/null || echo "R NOT FOUND"; \
       echo; \
       echo "## env: ips"; \
-      micromamba run -n ips bash -c 'java -version 2>&1 | head -1; \
-        printf "%-22s %s\n" InterProScan "$(InterProScan.sh -h 2>&1 | grep -i version | head -1 || echo present)"' \
-        2>/dev/null || echo "InterProScan NOT FOUND"; \
+      v=$(micromamba run -n ips bash -c "command -v java >/dev/null 2>&1 && java -version 2>&1 | head -1 || echo 'NOT FOUND'"); \
+      printf '%-22s %s\n' java "$v"; \
+      v=$(micromamba run -n ips bash -c "command -v interproscan.sh >/dev/null 2>&1 && echo present || echo 'NOT FOUND'"); \
+      printf '%-22s %s\n' interproscan.sh "$v"; \
     } > /opt/aplysia/ENVIRONMENT.txt 2>&1 || true
 
 CMD ["/bin/bash"]

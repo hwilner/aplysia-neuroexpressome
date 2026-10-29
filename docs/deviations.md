@@ -45,3 +45,47 @@ independent of it.
 
 **Reversal:** revert the pin and reinstall clusterProfiler, and run the R stack
 on R 4.3 instead. Do not do this without a solver check first.
+
+## D002 - the software environment in §2.2 is described as one environment, and the image is not
+
+**Date:** 2026-10-29. **Subtask:** P01-01.2. **Affects:** `materials-and-methods.md` §2.2.
+
+**Pre-registered:** §2.2 describes a `mambaforge` 23.11 base and a single
+environment, with InterProScan 5.70-102.0, `metafor` 4.4, `tidyverse`,
+`rstatix` and `lme4` among the statistics tools, and a Jupyter 1.x
+interpreter stage for notebooks and figure provenance.
+
+**Changed:** the image is four environments, built with micromamba 2.9.0, with
+InterProScan 5.59-91.0. The statistics environment now also carries `lme4`
+and `tidyverse`, which the pre-registration names and the image did not have.
+`metafor` is pinned at 4.6_0 rather than 4.4, because no build of 4.4
+accepts R 4.4. Liftoff and OrthoFinder come from bioconda rather than from
+git checkouts. There is no Jupyter stage.
+
+**Why:** each of these was forced by the solver or by the package index, and
+none of them changes the analysis.
+
+| §2.2 says | The image has | Why |
+|---|---|---|
+| `mambaforge` 23.11 | micromamba 2.9.0 | `mambaforge` 23.11 does not exist; micromamba 2.9.0 is the published base image |
+| one environment | four: `bio`, `tree`, `r`, `ips` | a single solve spanning bioconda, conda-forge's R stack and InterProScan's own library tree is fragile by construction, and a conflict in one of them then rules out all the others |
+| `InterProScan` 5.70-102.0 | 5.59-91.0 | bioconda's newest InterProScan build is 5.59-91.0; 5.70-102.0 is not distributed on conda |
+| `metafor` 4.4 | 4.6_0 | `metafor` 4.4_0 has no build for R 4.4; 4.6_0 does |
+| `lme4`, `tidyverse` | present | they were named in §2.2 and missing from the image |
+| Jupyter 1.x | absent | there is no analysis code, and so no notebook and no figure provenance to produce yet |
+| Liftoff from commit `b8a41b0` | `liftoff 1.3.0` from bioconda | the base image carries no `git`, so the checkout could not have been installed; the bioconda package is the upstream 1.3.0 release and declares its dependencies |
+
+**Consequence:** no change to the statistical procedure, the assumptions, the
+background, or the multiple-testing policy stated in the pre-registration. The
+R version is still 4.4, the Bioconductor pair is still the 3.20 generation, and
+every pre-specified test is still run by the tool the pre-registration names.
+The InterProScan data release does change, and for that reason the methods
+must state 5.59-91.0 and the catalogue must record the InterProScan version
+beside every domain hit; that was already flagged in
+`docs/P01-01-2-image-build.md` as a subtask still to be raised.
+
+**Reversal:** the environment split can be undone by moving the pins back into
+one `micromamba create`, but only after a solver check confirms the single
+transaction still resolves. The InterProScan data release can be restored by
+installing 5.70-102.0 from the InterProScan distribution instead of conda, at
+the cost of Java 11 and a much longer build.

@@ -92,6 +92,11 @@ jobs:
           [ "$status" -eq 0 ] && echo "OK: all figures have scripts"
           exit "$status"
 
+      - name: The environment parser agrees with the Dockerfile
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -v
+
       - name: Programme record is current
         run: |
           # Advisory only. A push to a project repo should be reflected in the
