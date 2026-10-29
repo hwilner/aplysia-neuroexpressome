@@ -17,6 +17,14 @@ release that matches), `BUSCO 5.7.1`, `HISAT2 2.2.1`, `InterProScan
 5.70-102.0`, `OrthoFinder 2.5.4`, `MAFFT 7.505`, `trimAl 1.4.rev22`,
 `IQ-TREE 2.2.6`, `R 4.4`, `limma 3.60`, `edgeR 4.0`, `metafor 4.4`.
 
+> **Superseded by P01-01.2.** The list above is what this subtask wrote, not
+> what the image now contains. Nine of those pins did not resolve, the
+> environment was split into four, and `metafor` moved to 4.6_0. The pins in
+> the Dockerfile are the current ones, and
+> [`docs/P01-01-2-image-build.md`](P01-01-2-image-build.md) records what
+> changed and why. This file is kept as the record of what was built and why,
+> not as a description of the image.
+
 ## Why the manifest matters
 
 The image writes `/opt/aplysia/ENVIRONMENT.txt` at build time, listing every
@@ -45,3 +53,8 @@ bioconda. Treat those two as the real test of this file.
 `liftoff` and `OrthoFinder` install from git with `--no-deps`, so a dependency
 that moved between the conda package and the git checkout will surface at
 runtime rather than at build time. P01-01.2 is where that shows up.
+
+> **Resolved by P01-01.2.** The risk was larger than it looked: the base image
+> carries no `git` at all, so the two checkouts could not have been installed
+> in the first place. Both tools now come from bioconda at the same pinned
+> versions, with their dependencies declared.
