@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Print the pinned tool manifest for all three environments, then run whatever
-# was passed in.
+# Print the pinned tool manifest for the image, then run whatever was passed
+# in. The manifest lists every environment the image defines; how many that
+# is, is decided by the Dockerfile.
 #
 # Usage:
 #   ./scripts/environment.sh                       print the manifest

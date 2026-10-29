@@ -21,6 +21,8 @@ results/
 # Environment
 .venv/
 venv/
+__pycache__/
+*.py[cod]
 .env
 .env.*
 conda-env/
