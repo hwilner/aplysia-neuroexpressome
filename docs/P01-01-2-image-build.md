@@ -1,6 +1,7 @@
-# P01-01.2 — image build: blocked locally, pins corrected, build moved to CI
+# P01-01.2 — image build: five attempts, and a green build
 
-**Status:** **blocked**, 2026-10-03. **Parent:** P01-01. **Estimate:** 1 day.
+**Status:** **done**, 2026-10-29. The image builds, from a clean cache, and
+every tool the Dockerfile names is in it. **Parent:** P01-01. **Estimate:** 1 day.
 **Depends on:** P01-01.1 (done).
 
 ## The blocker
@@ -195,8 +196,9 @@ pins in question, so the next run states metafor's actual requirement as a fact
 rather than a hypothesis. That is the difference between this being stuck and
 this being known.
 
-**P01-01.2 is still Blocked.** Three of four environments are proven; the image
-is not built. Nothing in this project is reproducible until it is.
+**P01-01.2 was still Blocked at this point.** Three of four environments were
+proven; the image was not built. Nothing in this project was reproducible
+until it was. The fifth attempt, below, is what changed that.
 
 ## Fifth attempt: the requirement as a fact, and three more names that were wrong
 
@@ -338,39 +340,129 @@ were worth: the image was building correctly while the gate was lying about
 it. A gate that only looks for one string is a gate that reports on the
 tools it happens to know about and stays silent about everything else.
 
-### What this attempt does and does not establish
+### The build, and what it produced
 
-It establishes that **all four environments solve**, each one checked with the
-solver, with the pins taken from the Dockerfile. It establishes that the
-manifest checks commands the packages actually ship, and that the manifest
-gate no longer passes on an empty manifest or on a manifest that is missing
-an environment.
+On 2026-10-29 the image built on a GitHub runner, from a clean cache and
+again from the cached layers, and every environment probed cleanly inside
+it. The manifest the image wrote for itself is the record:
 
-It does **not** establish that the image builds. The build itself had never
-run when this section was written: the first build attempt was blocked behind
-a solve that never passed. The next CI run is the first real test of the
-image, and until that run is green, nothing in this project is reproducible.
+```
+# environment manifest - generated at image build time
+built: 2026-10-29T07:25:45Z
+
+## env: bio
+python                 Python 3.11.9
+diamond                diamond version 2.1.8
+liftoff                v1.3.0
+busco                  BUSCO 5.7.1
+hisat2                 /opt/conda/envs/bio/bin/hisat2-align-s version 2.2.1
+samtools               samtools 1.19.2
+hmmsearch              Failed to parse command line: No such option "--version".
+emapper.py             There was an error retrieving eggnog-mapper DB data: not a valid file "..."
+gffread                0.9.9
+orthofinder
+TransDecoder.Predict   TransDecoder.Predict 5.7.0
+
+## env: tree
+mafft                  v7.525 (2024/Mar/13)
+trimal
+iqtree2                IQ-TREE multicore version 2.2.6 COVID-edition for Linux 64-bit built Dec  8 2023
+
+## env: r
+R R version 4.4.3 (2025-02-28)
+limma                  3.62.0
+edgeR                  4.4.0
+metafor                4.6.0
+lme4                   2.0.6
+tidyverse              2.0.0
+ggplot2                3.5.2
+patchwork              1.2.0
+rstatix                0.7.3
+testthat               3.2.3
+
+## env: ips
+java                   openjdk version "11.0.30-internal" 2026-01-20
+interproscan.sh        present
+```
+
+The build image, from the run's own digest step:
+
+```
+sha256:6ff264cd0cd1d15dfaf3348fb6d3d2b4bb7cc0305045674d24098197dd5e3214
+```
+
+**What this establishes.** The image builds from a clean cache. All four
+environments are present and usable in it, each of them probed separately.
+Every tool the Dockerfile names is installed under the name the Dockerfile
+checks, and the manifest contains no `NOT FOUND`. The pre-registered R 4.4
+is in the image, with limma 3.62.0 and edgeR 4.4.0 beside it.
+
+**What this does not establish.** It is a build result, not a scientific
+result. Nothing in the image has been run against data, so no result in this
+project is reproducible yet. The digest above is the digest of a test image
+built on a runner; it is not the released digest, which is P01-01.4's job.
+
+Three lines of the manifest are not versions, and the reason is worth
+recording: `hmmsearch`, `trimal`, `orthofinder` and `emapper.py` do not
+accept `--version`, so the first line of their output is what appears. The
+check that matters, that the command is installed, holds for all four. The
+`emapper.py` line reports that the eggNOG-mapper database is not in the
+image, which is expected: the conda package never ships it, and it is
+fetched with the rest of the inputs.
+
+### What this attempt establishes
+
+That **all four environments solve**, each one checked with the solver, with
+the pins taken from the Dockerfile; that the manifest checks commands the
+packages actually ship; that the manifest gate no longer passes on an empty
+manifest, on a manifest that is missing an environment, or on an image that
+has no manifest at all; and that the image builds from a clean cache and
+contains every tool the Dockerfile names.
+
+It does **not** establish anything about the science. Nothing in the image
+has been run against data.
 
 ## What a reviewer should take from this
 
-The image has never been built. The pins are verified to exist; the build is
-wired to run on every push to `main`; and the first CI run is the real
-verification. Until that run is green, no result in this project should be
-treated as reproducible, and the Dockerfile should be treated as unverified
-however carefully it has been written.
+The image builds, and the build is wired to run on every push to `main`, so
+the next push is the next verification of the pins.
 
-Four rounds of work went into the pins and none of them into the three
-things that would have failed the build once the pins were right: the
-manifest's four wrong command names, the git checkouts, and the `tree`
-environment that was never probed. A build that is red tells you about the
-first thing that is wrong. It does not tell you how many things are.
+Five defects stood between this repository and a working image, and four of
+them were invisible behind the first. Rounds one to four went into the pins
+and none of them into the three things that would have failed the build once
+the pins were right: the manifest's four wrong command names, the git
+checkouts, and the `tree` environment that was never probed. The fifth was
+found by the gate that the fourth round hardened: the image built, and the
+gate reported that the manifest was missing, which was true, because the
+manifest stage had been failing to write it since the beginning.
+
+A build that is red tells you about the first thing that is wrong. It does
+not tell you how many things are. And a gate that only looks for one string
+reports on the things it happens to know about, and stays silent about
+everything else.
+
+The original reviewer note, written before the build had ever run, said:
+
+> The image has never been built. The pins are verified to exist; the build is
+> wired to run on every push to `main`; and the first CI run is the real
+> verification. Until that run is green, no result in this project should be
+> treated as reproducible, and the Dockerfile should be treated as unverified
+> however carefully it has been written.
+
+The last sentence of that note is still true of the Dockerfile as a piece of
+prose. What the run has now established is narrower and more useful: the
+pins resolve, the image builds, and the tools are in it.
 
 ## Next
 
-- **P01-01.3** — the second build and the version diff. Unblocked once the
-  first CI run is green.
+- **P01-01.3** — the second build and the version diff. Unblocked now that the
+  first CI run is green. The workflow already builds the image twice, once
+  from the cached layers and once with `--no-cache`; what it does not yet do
+  is diff the two manifests.
 - **P01-01.4** — push the image and record the digest. Unblocked once P01-01.3
-  is done.
+  is done. The digest of the released image is not the digest of the test
+  image built on the runner, so the row in Table 7 of `results.md` stays
+  *Pending* until this subtask is done.
 - A new subtask is warranted: record the InterProScan data release in
   `materials-and-methods.md` and require the InterProScan version beside every
   catalogue domain hit. This was not in the original plan and should be added
