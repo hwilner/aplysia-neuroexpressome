@@ -38,11 +38,13 @@ Usage:
 """
 
 import argparse
+import datetime
 import json
 import os
 import re
 import subprocess
 import sys
+import tempfile
 from typing import Dict, List, NamedTuple, Optional, Tuple
 
 # The R packages are read by R itself, which reports their versions exactly.
@@ -183,29 +185,88 @@ def is_usable_version(value: str) -> bool:
     return not any(pattern in lowered for pattern in ERROR_PATTERNS)
 
 
-def run(command: str) -> Tuple[int, str]:
+def environment_command(environment: str, command: str) -> str:
+    """Return the command that runs `command` inside a micromamba environment.
+
+    The probes have to run in the environment they describe. Run in the
+    base environment they report whatever the base environment happens to
+    have, which is how an `openjdk=11` pin was reported as Java 22: the
+    `java` on the path was not the one the pin installed.
+
+    The command is written to a file and that file is run, rather than
+    being quoted into a command line. Several probes contain single quotes
+    of their own, and quoting them into a command line is where the first
+    version of the R probe went wrong.
+
+    Args:
+        environment: the name of the micromamba environment.
+        command: the command to run inside it.
+
+    Returns:
+        The command that runs the other command in the environment.
+    """
+    handle = tempfile.NamedTemporaryFile(
+        "w", suffix=".sh", delete=False, encoding="utf-8"
+    )
+    handle.write(command)
+    handle.close()
+    return f"micromamba run -n {environment} bash {handle.name}"
+
+
+def run(command: str, environment: str = "") -> Tuple[int, str]:
     """Run a shell command and return its exit status and first output line.
 
     Args:
         command: the shell command to run.
+        environment: the micromamba environment to run it in, if any.
 
     Returns:
-        A pair of the exit status and the first line of combined output.
+        A pair of the exit status and the first line of standard output.
     """
+    status, stdout, stderr = run_full(command, environment)
+    lines = [line.strip() for line in stdout.splitlines() if line.strip()]
+    return status, lines[0] if lines else ""
+
+
+def run_full(command: str, environment: str = "") -> Tuple[int, str, str]:
+    """Run a shell command and return its status and both output streams.
+
+    The streams have to be kept apart. `micromamba list` writes a header
+    line before the package list, and the header is on standard output, so
+    a helper that took the first line of the combined output returned the
+    header and never the list. A helper that joined the streams would
+    return a header on standard error instead of the JSON on standard
+    output. Neither is what the caller asked for.
+
+    Args:
+        command: the shell command to run.
+        environment: the micromamba environment to run it in, if any.
+
+    Returns:
+        A triple of the exit status, standard output and standard error.
+    """
+    script = ""
+    if environment:
+        command = environment_command(environment, command)
+        script = command.split(" bash ", 1)[1]
     try:
         completed = subprocess.run(
             command,
             shell=True,
             capture_output=True,
             text=True,
-            timeout=300,
+            timeout=600,
             check=False,
         )
     except (subprocess.TimeoutExpired, OSError):
-        return 1, ""
-    output = (completed.stdout or "") + (completed.stderr or "")
-    lines = [line.strip() for line in output.splitlines() if line.strip()]
-    return completed.returncode, lines[0] if lines else ""
+        return 1, "", ""
+    finally:
+        if script:
+            try:
+                os.unlink(script)
+            except OSError:
+                pass
+    return completed.returncode, completed.stdout or "", completed.stderr or ""
 
 
 def package_versions(environment: str) -> Dict[str, str]:
@@ -217,15 +278,28 @@ def package_versions(environment: str) -> Dict[str, str]:
     Returns:
         A mapping of package name to resolved version.
     """
-    status, output = run(f"micromamba list -n {environment} --json")
-    if status != 0 or not output:
+    status, stdout, _ = run_full(
+        f"micromamba list -n {environment} --json", environment
+    )
+    if status != 0 or not stdout.strip():
         return {}
     try:
-        payload = json.loads(output)
+        payload = json.loads(stdout)
     except json.JSONDecodeError:
-        return {}
+        # Some builds print a banner before the JSON. Take the array out of
+        # the output rather than losing the whole listing to it.
+        start = stdout.find("[")
+        end = stdout.rfind("]")
+        if start == -1 or end <= start:
+            return {}
+        try:
+            payload = json.loads(stdout[start : end + 1])
+        except json.JSONDecodeError:
+            return {}
     versions = {}
     for entry in payload:
+        if not isinstance(entry, dict):
+            continue
         name = entry.get("name")
         version = entry.get("version")
         if name and version:
@@ -233,7 +307,27 @@ def package_versions(environment: str) -> Dict[str, str]:
     return versions
 
 
-def tool_version(tool: Tool, versions: Dict[str, str]) -> Tuple[str, str]:
+def package_listing(environment: str) -> List[str]:
+    """Return the resolved package list of an environment, one package per line.
+
+    Args:
+        environment: the name of the micromamba environment.
+
+    Returns:
+        The listing lines, without the banner `micromamba list` prints.
+    """
+    status, stdout, _ = run_full(f"micromamba list -n {environment}", environment)
+    if status != 0:
+        return []
+    lines = [line.rstrip() for line in stdout.splitlines() if line.strip()]
+    if lines and lines[0].lower().startswith("list of packages"):
+        lines = lines[1:]
+    return lines
+
+
+def tool_version(
+    tool: Tool, versions: Dict[str, str], environment: str = ""
+) -> Tuple[str, str]:
     """Return the version of a tool and where that version came from.
 
     The tool's own version flag is tried first. When none of the candidates
@@ -244,12 +338,13 @@ def tool_version(tool: Tool, versions: Dict[str, str]) -> Tuple[str, str]:
     Args:
         tool: the tool to interrogate.
         versions: the resolved package versions of the environment.
+        environment: the micromamba environment to probe in.
 
     Returns:
         A pair of the version and its source, one of "tool" or "package".
     """
     for candidate in tool.candidates:
-        status, output = run(candidate)
+        status, output = run(candidate, environment)
         if status == 0 and is_usable_version(output):
             return output, "tool"
     fallback = versions.get(tool.package)
@@ -267,18 +362,22 @@ def r_package_versions(environment: str) -> List[str]:
     Returns:
         A list of "<package><TAB><version>" lines.
     """
+    # The R code goes inside shell double quotes and the R strings inside
+    # shell single quotes. The other way round, the R string quotes end the
+    # shell's quoting and the code arrives at R with its quotes stripped.
     expression = (
         "cat(sprintf('%-22s %s\\n', p, "
         "tryCatch(as.character(packageVersion(p)), error=function(e) 'NOT FOUND')))"
     )
-    packages = ", ".join(f'"{name}"' for name in R_PACKAGES)
-    status, output = run(
-        f"micromamba run -n {environment} Rscript -e "
-        f"'for (p in c({packages})) {expression}'"
+    packages = ", ".join(f"'{name}'" for name in R_PACKAGES)
+    status, stdout, _ = run_full(
+        f"Rscript -e \"for (p in c({packages})) {expression}\"", environment
     )
     if status != 0:
-        return [f"R{'':<21} NOT FOUND"]
-    return [line for line in output.splitlines() if line.strip()]
+        return ["R NOT FOUND"]
+    # Every package prints its own line, so the whole output is needed here.
+    # Taking the first line would report one package and lose the other eight.
+    return [line.rstrip() for line in stdout.splitlines() if line.strip()]
 
 
 def build_manifest(environments: List[str]) -> str:
@@ -292,12 +391,9 @@ def build_manifest(environments: List[str]) -> str:
     """
     lines = [
         "# environment manifest - generated at image build time",
-        "built: " + subprocess.run(
-            ["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"],
-            capture_output=True,
-            text=True,
-            check=False,
-        ).stdout.strip(),
+        "built: " + datetime.datetime.now(datetime.timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        ),
         "",
     ]
     for environment in environments:
@@ -307,7 +403,7 @@ def build_manifest(environments: List[str]) -> str:
             lines.extend(r_package_versions(environment))
         else:
             for tool in TOOLS.get(environment, []):
-                version, source = tool_version(tool, versions)
+                version, source = tool_version(tool, versions, environment)
                 if not version:
                     version = "NOT FOUND"
                     source = "none"
@@ -315,11 +411,8 @@ def build_manifest(environments: List[str]) -> str:
                 lines.append(f"{tool.command:<22} {version}{note}")
         lines.append("")
         lines.append(f"## packages: {environment}")
-        status, output = run(f"micromamba list -n {environment}")
-        if status == 0 and output.strip():
-            lines.extend(output.rstrip().splitlines())
-        else:
-            lines.append("NOT FOUND")
+        listing = package_listing(environment)
+        lines.extend(listing if listing else ["NOT FOUND"])
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 

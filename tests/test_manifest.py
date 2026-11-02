@@ -299,6 +299,89 @@ class DiffTest(unittest.TestCase):
             self.assertEqual(bad[0][1], "orthofinder")
 
 
+class RListingTest(unittest.TestCase):
+    """The R section has to list every package, not the first one.
+
+    The R code prints one line per package. A helper that returned only the
+    first line of the output would have reported one package and silently
+    lost the other eight.
+    """
+
+    def test_every_r_package_is_listed(self):
+        """All nine packages come back."""
+        output = "\n".join(
+            f"{name:<22} 1.0.0" for name in manifest.R_PACKAGES
+        )
+        original = manifest.run_full
+        manifest.run_full = lambda command, environment="": (0, output, "")
+        try:
+            lines = manifest.r_package_versions("r")
+        finally:
+            manifest.run_full = original
+        self.assertEqual(len(lines), len(manifest.R_PACKAGES))
+        for name in manifest.R_PACKAGES:
+            self.assertTrue(
+                any(line.startswith(name) for line in lines),
+                f"{name} is missing from the R section",
+            )
+
+
+class EnvironmentTest(unittest.TestCase):
+    """A probe has to run in the environment it describes.
+
+    Run in the base environment, a probe reports whatever the base
+    environment happens to have. That is how an `openjdk=11` pin was
+    reported as Java 22: the java on the path was not the one the pin
+    installed, and the manifest said so without noticing.
+    """
+
+    def test_probes_run_inside_the_environment(self):
+        """The generated command must enter the environment."""
+        command = manifest.environment_command("ips", "java -version")
+        self.assertIn("micromamba run -n ips", command)
+        self.assertIn("java -version", open(command.split("bash ", 1)[1]).read())
+
+    def test_a_probe_with_quotes_survives(self):
+        """A command containing single quotes has to arrive intact."""
+        probe = "python -c \"import Bio; print(Bio.__version__)\""
+        command = manifest.environment_command("bio", probe)
+        path = command.split("bash ", 1)[1]
+        with open(path, encoding="utf-8") as handle:
+            self.assertEqual(handle.read(), probe)
+
+
+class ShellQuotingTest(unittest.TestCase):
+    """The R code has to survive the shell on its way to R.
+
+    The first version put the R expression in shell single quotes while the
+    R code itself used single quotes, so the shell ended the quoting early
+    and R received code with its quotes stripped. R reported a syntax error,
+    the manifest recorded "R NOT FOUND", and the gate passed it.
+    """
+
+    def test_r_expression_reaches_the_shell_intact(self):
+        """The argument R receives must still have its quotes."""
+        expression = (
+            "cat(sprintf('%-22s %s\\n', p, "
+            "tryCatch(as.character(packageVersion(p)), error=function(e) 'NOT FOUND')))"
+        )
+        packages = ", ".join(f"'{name}'" for name in manifest.R_PACKAGES)
+        command = (
+            f"micromamba run -n r Rscript -e "
+            f'"for (p in c({packages})) {expression}"'
+        )
+        delivered = subprocess.run(
+            ["sh", "-c", f"printf '%s' {command.split('Rscript -e ', 1)[1]}"],
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout
+        self.assertIn("'limma'", delivered)
+        self.assertIn("sprintf(", delivered)
+        self.assertIn("NOT FOUND'", delivered)
+        self.assertNotIn("Rscript", delivered)
+
+
 class ScriptTest(unittest.TestCase):
     """Both scripts have to be runnable from the command line."""
 
