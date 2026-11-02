@@ -3,6 +3,14 @@
 Each entry is filed here *and* raised as a `deviation-log` issue, and each is
 stated in the manuscript methods. The pre-registration is not edited silently.
 
+| Entry | Issue | Covers |
+|---|---|---|
+| D001 | this repository | clusterProfiler dropped; limma and edgeR taken from one Bioconductor generation |
+| D002 | [#27](https://github.com/hwilner/aplysia-neuroexpressome/issues/27) | §2.2 as a whole: the base image, the InterProScan data release, MAFFT and trimAl, and the four-environment split |
+
+**D002 is open.** `materials-and-methods.md` §2.2 still describes the
+pre-registered toolchain, and it stays that way until the issue is decided.
+
 ## D001 - clusterProfiler dropped; enrichment is implemented in base R
 
 **Date:** 2026-10-04. **Subtask:** P01-01.2. **Affects:** `materials-and-methods.md` §2.2.
