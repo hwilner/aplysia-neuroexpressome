@@ -15,6 +15,9 @@ on:
       - 'Dockerfile'
       - '.github/workflows/build-image.yml'
       - 'scripts/environments.py'
+      - 'scripts/manifest.py'
+      - 'scripts/diff_manifests.py'
+      - 'scripts/requirements.py'
   workflow_dispatch:
 
 # Least privilege: the workflow only needs to read the tree.
@@ -133,6 +136,12 @@ jobs:
             /opt/aplysia/bin/environment.sh > environment.txt
           cat environment.txt
 
+      - name: Emit the manifest of the no-cache build
+        run: |
+          set -euo pipefail
+          docker run --rm aplysia-neuroexpressome:nocache \
+            /opt/aplysia/bin/environment.sh > environment-nocache.txt
+
       - name: Fail if any pinned tool is missing
         run: |
           set -euo pipefail
@@ -202,4 +211,70 @@ jobs:
         with:
           name: build-result
           path: build-result.md
+          retention-days: 365
+
+  # P01-01.3 - the second build.
+  #
+  # A rebuild inside the same job would share the runner's base-image layers
+  # and its build cache, so it would not be an independent build. This job
+  # runs on its own runner with no cache, which makes the comparison a
+  # comparison of two separate builds rather than of a build with itself.
+  rebuild:
+    name: build the image again, independently
+    needs: solve-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build again, from nothing
+        run: |
+          set -euo pipefail
+          docker build --no-cache -t aplysia-neuroexpressome:rebuild .
+
+      - name: Emit the manifest of the rebuild
+        run: |
+          set -euo pipefail
+          docker run --rm aplysia-neuroexpressome:rebuild \
+            /opt/aplysia/bin/environment.sh > environment-rebuild.txt
+          cat environment-rebuild.txt
+
+      - name: Upload the rebuild manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: environment-manifest-rebuild
+          path: environment-rebuild.txt
+          retention-days: 90
+
+  # The comparison P01-01.3 asks for.
+  version-diff:
+    name: diff the two builds
+    needs: [build, rebuild]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download both manifests
+        uses: actions/download-artifact@v4
+        with:
+          path: manifests
+
+      - name: Compare them
+        run: |
+          set -uo pipefail
+          python3 scripts/diff_manifests.py \
+            manifests/environment-manifest/environment.txt \
+            manifests/environment-manifest-rebuild/environment-rebuild.txt \
+            | tee version-diff.txt
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            echo "::error::the two builds do not agree on the tool versions"
+            exit 1
+          fi
+
+      - name: Upload the diff
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: version-diff
+          path: version-diff.txt
           retention-days: 365

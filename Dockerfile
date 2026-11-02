@@ -190,47 +190,39 @@ ENV PATH=/opt/aplysia/bin:$PATH
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PYTHONHASHSEED=0
 
-# ---- tool manifest: printed on every run and captured in the log ---------
-#
-# The names below are the commands the pinned packages actually install, and
-# they have to be: a name that the package does not ship reads as "NOT
-# FOUND", and the build then fails on a tool that is present under a
-# different name. Four were wrong before: hmmer ships hmmsearch, not
-# hmmer-hsearch; eggnog-mapper ships emapper.py, not eggnog-mapper.pl;
-# transdecoder ships TransDecoder.Predict, not TransDecoder.R; and the
-# interproscan package ships interproscan.sh, not InterProScan.sh.
-#
-# InterProScan is checked for presence only. Running it needs the member
-# databases, which the conda package does not ship, and the check is about
-# the command being installed.
-RUN { \
-      echo "# environment manifest - generated at image build time"; \
-      echo "built: $(date -u +%Y-%m-%dT%H:%M:%SZ)"; \
-      echo; \
-      echo "## env: bio"; \
-      for t in python diamond liftoff busco hisat2 samtools hmmsearch \
-               emapper.py gffread orthofinder TransDecoder.Predict; do \
-        v=$(micromamba run -n bio bash -c "command -v $t >/dev/null 2>&1 && ($t --version 2>&1 | head -1 || echo present) || echo 'NOT FOUND'"); \
-        printf '%-22s %s\n' "$t" "$v"; \
-      done; \
-      echo; \
-      echo "## env: tree"; \
-      for t in mafft trimal iqtree2; do \
-        v=$(micromamba run -n tree bash -c "command -v $t >/dev/null 2>&1 && ($t --version 2>&1 | head -1 || echo present) || echo 'NOT FOUND'"); \
-        printf '%-22s %s\n' "$t" "$v"; \
-      done; \
-      echo; \
-      echo "## env: r"; \
-      micromamba run -n r Rscript -e 'cat("R ", R.version.string, "\n", sep=""); \
-        for (p in c("limma","edgeR","metafor","lme4","tidyverse","ggplot2","patchwork","rstatix","testthat")) \
-          cat(sprintf("%-22s %s\n", p, tryCatch(as.character(packageVersion(p)), error=function(e) "NOT FOUND")))' \
-        2>/dev/null || echo "R NOT FOUND"; \
-      echo; \
-      echo "## env: ips"; \
-      v=$(micromamba run -n ips bash -c "command -v java >/dev/null 2>&1 && java -version 2>&1 | head -1 || echo 'NOT FOUND'"); \
-      printf '%-22s %s\n' java "$v"; \
-      v=$(micromamba run -n ips bash -c "command -v interproscan.sh >/dev/null 2>&1 && echo present || echo 'NOT FOUND'"); \
-      printf '%-22s %s\n' interproscan.sh "$v"; \
-    } > /opt/aplysia/ENVIRONMENT.txt 2>&1 || true
+  # ---- tool manifest: written at build time, inspectable without the image ----
+  #
+  # The manifest is what makes the pins inspectable without pulling the
+  # image. It used to be written by a shell loop here that ran `--version` on
+  # every command and recorded whatever came back. Four of the command names
+  # were wrong, and were fixed; but the loop itself was the defect, because
+  # it recorded failures as though they were versions:
+  #
+  #   hmmsearch     Failed to parse command line: No such option "--version".
+  #   emapper.py    There was an error retrieving eggnog-mapper DB data: ...
+  #   orthofinder   (empty)
+  #   trimal        (empty)
+  #
+  # A manifest holding error text cannot be compared with another manifest
+  # and called a version comparison, and the build gate looked for the string
+  # "NOT FOUND" and so passed every one of those lines. The generation now
+  # lives in scripts/manifest.py, which tries several invocations per tool,
+  # validates the output, and falls back to the version of the conda package
+  # that provides the command. The fallback cannot fail: the package is in
+  # the image by construction.
+  #
+  # The manifest also carries the resolved package list for every
+  # environment. The direct pins are a dozen packages; what is actually
+  # installed is their whole transitive closure, and that closure is what has
+  # to be identical between two builds.
+  #
+  # The stage fails the build if it cannot write the manifest. An earlier
+  # revision swallowed the error with "|| true" and shipped images with no
+  # manifest at all.
+  RUN micromamba run -n bio python3 /opt/aplysia/bin/manifest.py \
+        --output /opt/aplysia/ENVIRONMENT.txt
+
+  # The manifest has to be readable by the user the image runs as.
+  RUN chmod 644 /opt/aplysia/ENVIRONMENT.txt
 
 CMD ["/bin/bash"]

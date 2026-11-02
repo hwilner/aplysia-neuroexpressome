@@ -1,0 +1,36 @@
+# environment manifest - generated at image build time
+built: 2026-10-29T07:25:45Z
+
+## env: bio
+python                 Python 3.11.9
+diamond                diamond version 2.1.8
+liftoff                v1.3.0
+busco                  BUSCO 5.7.1
+hisat2                 /opt/conda/envs/bio/bin/hisat2-align-s version 2.2.1
+samtools               samtools 1.19.2
+hmmsearch              Failed to parse command line: No such option "--version".
+emapper.py             There was an error retrieving eggnog-mapper DB data: not a valid file "/opt/conda/envs/bio/lib/python3.11/site-packages/data/eggnog.db"
+gffread                0.9.9
+orthofinder            
+TransDecoder.Predict   TransDecoder.Predict 5.7.0
+
+## env: tree
+mafft                  v7.525 (2024/Mar/13)
+trimal                 
+iqtree2                IQ-TREE multicore version 2.2.6 COVID-edition for Linux 64-bit built Dec  8 2023
+
+## env: r
+R R version 4.4.3 (2025-02-28)
+limma                  3.62.0
+edgeR                  4.4.0
+metafor                4.6.0
+lme4                   2.0.6
+tidyverse              2.0.0
+ggplot2                3.5.2
+patchwork              1.2.0
+rstatix                0.7.3
+testthat               3.2.3
+
+## env: ips
+java                   openjdk version "11.0.30-internal" 2026-01-20
+interproscan.sh        present

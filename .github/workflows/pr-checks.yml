@@ -97,6 +97,11 @@ jobs:
           set -euo pipefail
           python3 -m unittest discover -s tests -v
 
+      - name: The workflow files are structurally sound
+        run: |
+          set -euo pipefail
+          python3 scripts/check_workflow.py .github/workflows/*.yml
+
       - name: Programme record is current
         run: |
           # Advisory only. A push to a project repo should be reflected in the
