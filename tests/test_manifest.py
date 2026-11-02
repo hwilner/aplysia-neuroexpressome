@@ -299,6 +299,45 @@ class DiffTest(unittest.TestCase):
             self.assertEqual(bad[0][1], "orthofinder")
 
 
+class PackageListingTest(unittest.TestCase):
+    """The package versions have to be readable, in either form.
+
+    The fallback is the only way some tools get a version at all, so a
+    listing that does not parse leaves those tools recorded as absent.
+    """
+
+    def test_reads_a_bare_json_array(self):
+        """The array form is read."""
+        payload = '[{"name": "eggnog-mapper", "version": "2.1.9"}]'
+        versions = manifest._versions_from_json(payload)
+        self.assertEqual(versions.get("eggnog-mapper"), "2.1.9")
+
+    def test_reads_json_under_a_key(self):
+        """The object form is read."""
+        payload = '{"packages": [{"name": "eggnog-mapper", "version": "2.1.9"}]}'
+        versions = manifest._versions_from_json(payload)
+        self.assertEqual(versions.get("eggnog-mapper"), "2.1.9")
+
+    def test_ignores_a_banner_before_the_json(self):
+        """A banner does not lose the listing."""
+        payload = 'List of packages in environment: "/opt/conda/envs/bio"\n' \
+                  '[{"name": "eggnog-mapper", "version": "2.1.9"}]'
+        versions = manifest._versions_from_json(payload)
+        self.assertEqual(versions.get("eggnog-mapper"), "2.1.9")
+
+    def test_reads_the_text_listing(self):
+        """The text listing is the fallback."""
+        lines = [
+            "Name                         Version       Build                  Channel",
+            "------------------------------------------------",
+            "eggnog-mapper                2.1.9         pyhdfd78af_0          bioconda",
+            "biopython                    1.83          py311h459d7ec_0        conda-forge",
+        ]
+        versions = manifest._versions_from_text(lines)
+        self.assertEqual(versions.get("eggnog-mapper"), "2.1.9")
+        self.assertEqual(versions.get("biopython"), "1.83")
+
+
 class StreamTest(unittest.TestCase):
     """A version probe has to look at both output streams.
 

@@ -292,29 +292,94 @@ def package_versions(environment: str) -> Dict[str, str]:
     # Not run inside the environment: `micromamba list` is the environment
     # manager's own command and reads the prefix directly.
     status, stdout, _ = run_full(f"micromamba list -n {environment} --json")
-    if status != 0 or not stdout.strip():
-        return {}
+    if status == 0 and stdout.strip():
+        versions = _versions_from_json(stdout)
+        if versions:
+            return versions
+    # The JSON is the convenient form, not a guaranteed one. The text
+    # listing is always there, and it is what the manifest prints, so it is
+    # also the fallback.
+    return _versions_from_text(package_listing(environment))
+
+
+def _versions_from_json(text: str) -> Dict[str, str]:
+    """Return the package versions in a JSON listing.
+
+    The shape is not fixed: some versions of micromamba print a bare array
+    of package objects and some print an object with the array under a key.
+    Both are handled, and a banner printed before the JSON is ignored.
+
+    Args:
+        text: the JSON output, possibly preceded by a banner.
+
+    Returns:
+        A mapping of package name to version; empty if nothing parsed.
+    """
+    payloads: List = []
     try:
-        payload = json.loads(stdout)
+        payloads.append(json.loads(text))
     except json.JSONDecodeError:
-        # Some builds print a banner before the JSON. Take the array out of
-        # the output rather than losing the whole listing to it.
-        start = stdout.find("[")
-        end = stdout.rfind("]")
-        if start == -1 or end <= start:
-            return {}
-        try:
-            payload = json.loads(stdout[start : end + 1])
-        except json.JSONDecodeError:
-            return {}
-    versions = {}
-    for entry in payload:
-        if not isinstance(entry, dict):
+        start = text.find("[")
+        end = text.rfind("]")
+        if start != -1 and end > start:
+            try:
+                payloads.append(json.loads(text[start : end + 1]))
+            except json.JSONDecodeError:
+                pass
+        start = text.find("{")
+        end = text.rfind("}")
+        if start != -1 and end > start:
+            try:
+                payloads.append(json.loads(text[start : end + 1]))
+            except json.JSONDecodeError:
+                pass
+
+    versions: Dict[str, str] = {}
+    for payload in payloads:
+        entries = payload
+        if isinstance(payload, dict):
+            for key in ("packages", "installed_packages", "pkgs"):
+                if isinstance(payload.get(key), list):
+                    entries = payload[key]
+                    break
+            else:
+                entries = []
+        if not isinstance(entries, list):
             continue
-        name = entry.get("name")
-        version = entry.get("version")
-        if name and version:
-            versions[name] = version
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            name = entry.get("name")
+            version = entry.get("version")
+            if name and version:
+                versions[name] = version
+        if versions:
+            break
+    return versions
+
+
+def _versions_from_text(lines: List[str]) -> Dict[str, str]:
+    """Return the package versions in a text listing.
+
+    The listing is four columns: name, version, build string and channel.
+    None of them contains a space, so the columns can be split on
+    whitespace.
+
+    Args:
+        lines: the listing lines.
+
+    Returns:
+        A mapping of package name to version.
+    """
+    versions: Dict[str, str] = {}
+    for line in lines:
+        fields = line.split()
+        if len(fields) < 2:
+            continue
+        name, version = fields[0], fields[1]
+        if name.lower() == "name" or version.startswith("---"):
+            continue
+        versions[name] = version
     return versions
 
 

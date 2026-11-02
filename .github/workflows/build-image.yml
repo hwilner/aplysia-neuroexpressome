@@ -175,7 +175,12 @@ jobs:
             grep 'NOT FOUND' environment.txt
             exit 1
           fi
-          echo "OK: every tool named in the Dockerfile is present"
+          # Looking for the string NOT FOUND reports on the failures the
+          # check knows about and stays silent about the rest. A tool whose
+          # version came back as an error message, or as nothing at all, is
+          # just as broken and has to fail the build too.
+          python3 scripts/diff_manifests.py --check environment.txt
+          echo "OK: every tool named in the Dockerfile is present, with a version"
 
       - name: Digest
         run: |
