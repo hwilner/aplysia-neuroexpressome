@@ -1,6 +1,6 @@
 # P01-01.3 — build the image a second time and diff the tool versions
 
-**Parent:** P01-01. **Status:** in progress. **Started:** 2026-11-02.
+**Parent:** P01-01. **Status:** Done. **Started:** 2026-11-02. **Finished:** 2026-11-02.
 
 ## What the subtask asks
 
@@ -167,3 +167,67 @@ reports `HMMER 3.4` instead of a command-line error, `orthofinder` reports
 reports `InterProScan version 5.59-91.0` instead of merely `present`. The
 last of those is the InterProScan data release that the methods still have to
 record.
+
+## Result
+
+CI run 13 of `build-image.yml`, commit `d3c1626`, every job green:
+
+```
+read the environments from the Dockerfile   success
+solve env bio                              success
+solve env tree                             success
+solve env r                                success
+solve env ips                              success
+build                                     success
+build the image again, independently       success
+diff the two builds                        success
+```
+
+The comparison itself, recorded in `docs/version-diff-2026-11-02.txt`:
+
+```
+compared manifests/environment-manifest/environment.txt
+       with manifests/environment-manifest-rebuild/environment-rebuild.txt
+excluded 1 build-timestamp line(s) from each manifest
+the two builds agree on every tool version
+```
+
+Both manifests are 58,043 bytes and byte-identical apart from the build
+timestamp. They are committed as `docs/manifest-build-1.txt` and
+`docs/manifest-build-2.txt`, so the comparison can be repeated from the
+repository rather than trusted.
+
+Every tool now reports a real version. `emapper.py` reports `2.1.9` and is
+marked `[package version]`, which says where it came from: its own flag
+fails, because the package ships no database for it to read, so the version
+of the package that provides it is used instead.
+
+## What this does and does not establish
+
+That the pins resolve to the same tool versions twice, on two different
+runners, with no shared Docker cache and no shared build cache. That is a
+statement about the environment and not about the science: nothing in the
+image has been run against data.
+
+The digest in the manifest is the digest of a test image built on a runner.
+It is not the released digest, which P01-01.4 records.
+
+## Lesson worth carrying
+
+The interesting failure was never a dependency conflict. It was a check that
+passed because it looked for the wrong string.
+
+Four separate things were wrong with the first version of the manifest, and
+the build was green through all of them:
+
+- the probes ran outside the environment they described, so an `openjdk=11`
+  pin was reported as Java 22;
+- `micromamba list` writes a header before the list, so the package versions
+  were never read and every fallback had nothing to fall back on;
+- the R expression was mangled by the shell's quoting;
+- a version on standard error is a version, and `java -version` writes to
+  standard error.
+
+Not one of them was caught by a gate that searched for `NOT FOUND`. A green
+build with a broken manifest is worse than a red one, because it is
+believed.

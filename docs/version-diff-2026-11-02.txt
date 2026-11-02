@@ -1,0 +1,3 @@
+compared manifests/environment-manifest/environment.txt with manifests/environment-manifest-rebuild/environment-rebuild.txt
+excluded 1 build-timestamp line(s) from each manifest
+the two builds agree on every tool version
