@@ -299,6 +299,34 @@ class DiffTest(unittest.TestCase):
             self.assertEqual(bad[0][1], "orthofinder")
 
 
+class StreamTest(unittest.TestCase):
+    """A version probe has to look at both output streams.
+
+    `java -version` writes to standard error, and so do `gffread --version`
+    and `mafft --version`. A probe that reads only standard output sees
+    nothing for those three and records them as absent.
+    """
+
+    def test_a_version_on_stderr_is_found(self):
+        """A tool that reports on standard error is still found."""
+        original = manifest.run_full
+        manifest.run_full = lambda command, environment="": (
+            0,
+            "",
+            "openjdk version \"11.0.30-internal\" 2026-01-20\n",
+        )
+        try:
+            version, source = manifest.tool_version(
+                manifest.Tool("java", "openjdk", ("java -version",)),
+                {"openjdk": "11.0.30"},
+                "ips",
+            )
+        finally:
+            manifest.run_full = original
+        self.assertEqual(version, 'openjdk version "11.0.30-internal" 2026-01-20')
+        self.assertEqual(source, "tool")
+
+
 class RListingTest(unittest.TestCase):
     """The R section has to list every package, not the first one.
 

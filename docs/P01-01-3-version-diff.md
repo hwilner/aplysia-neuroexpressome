@@ -82,3 +82,88 @@ that passed because it looked for the wrong string. A build gate that
 searches for `NOT FOUND` reports on the failures it knows about and stays
 silent about the ones it does not, and a green build with a broken manifest
 is worse than a red one, because it is believed.
+
+## What the first CI runs of this subtask found
+
+Four runs, each finding something the previous one had not.
+
+**Run 1 — the probes were run outside their environment.** The manifest
+reported `java` as `openjdk version "22.0.1-internal"`. The pin is
+`openjdk=11`. The `java` on the path was not the one the pin installed,
+because the probes ran in the image's base environment rather than in the
+environment they describe. Every probe now runs inside its own environment.
+
+**Run 1 also — `micromamba list` writes a header line before the list.** The
+helper took the first line of the combined output and so returned the header
+and never the package list. That is why every fallback said `none version`:
+the package versions were never read at all. The two output streams are now
+kept apart, and the listing keeps every line.
+
+**Run 1 also — the R expression was mangled by the shell.** The R string
+quotes sat inside the shell's single quotes, so the shell ended the quoting
+early and R received code with its quotes stripped. The R code now goes
+inside shell double quotes with R single quotes inside.
+
+**Run 2 — a version on standard error is a version.** `java -version` writes
+to standard error, and so do `gffread --version` and `mafft --version`. A
+probe that reads only standard output sees nothing for those three. The
+probes now read both streams.
+
+**Run 3 — the runner ran out of disk.** The `build` job built the image
+twice, once cached and once not, and the annotation on the failed run reads
+`No space left on device`. The `rebuild` job, which builds once on its own
+runner, passed. Each job now builds once: the `build` job does the
+clean-cache build that P01-01.2 asks for, and `rebuild` is the second,
+independent one.
+
+That third one is worth recording. The failure was not in anything the
+project controls — it was the runner's disk, and it only appeared in the job
+that did twice the work. The second build is now a separate job on a
+separate runner, which is what P01-01.3 wanted anyway.
+
+## What the manifest now reports
+
+From the successful independent rebuild, before the last two fixes:
+
+```
+## env: bio
+python                 Python 3.11.9
+diamond                diamond version 2.1.8
+liftoff                v1.3.0
+busco                  BUSCO 5.7.1
+hisat2                 /opt/conda/envs/bio/bin/hisat2-align-s version 2.2.1
+samtools               samtools 1.19.2
+hmmsearch              HMMER 3.4
+emapper.py             NOT FOUND  [none version]
+gffread                NOT FOUND  [none version]
+biopython              1.83
+orthofinder            OrthoFinder version 2.5.4
+TransDecoder.Predict   TransDecoder.Predict 5.7.0
+## env: tree
+mafft                  NOT FOUND  [none version]
+trimal                 trimAl v1.5.rev1 build[2025-11-25]
+iqtree2                IQ-TREE multicore version 2.2.6 COVID-edition ...
+## env: r
+limma                  3.62.0
+edgeR                  4.4.0
+metafor                4.6.0
+lme4                   2.0.6
+tidyverse              2.0.0
+ggplot2                3.5.2
+patchwork              1.2.0
+rstatix                0.7.3
+testthat               3.2.3
+## env: ips
+java                   NOT FOUND  [none version]
+interproscan.sh        InterProScan version 5.59-91.0
+```
+
+The four `NOT FOUND` lines are the standard-error bug, since fixed, and the
+package fallback that was not being read for the same reason.
+
+Three of the four new probes worked on the first attempt — `hmmsearch` now
+reports `HMMER 3.4` instead of a command-line error, `orthofinder` reports
+`OrthoFinder version 2.5.4` instead of nothing, and `interproscan.sh`
+reports `InterProScan version 5.59-91.0` instead of merely `present`. The
+last of those is the InterProScan data release that the methods still have to
+record.

@@ -216,15 +216,26 @@ def environment_command(environment: str, command: str) -> str:
 def run(command: str, environment: str = "") -> Tuple[int, str]:
     """Run a shell command and return its exit status and first output line.
 
+    Both output streams are searched for the line. Several tools report
+    their version on standard error: `java -version` always does, and
+    `gffread --version` and `mafft --version` do as well. A version probe
+    that reads only standard output sees an empty string for those three
+    and records them as absent, which is how an `openjdk=11` pin was
+    reported as absent from the image.
+
     Args:
         command: the shell command to run.
         environment: the micromamba environment to run it in, if any.
 
     Returns:
-        A pair of the exit status and the first line of standard output.
+        A pair of the exit status and the first line of output.
     """
     status, stdout, stderr = run_full(command, environment)
-    lines = [line.strip() for line in stdout.splitlines() if line.strip()]
+    lines = [
+        line.strip()
+        for line in (stdout + stderr).splitlines()
+        if line.strip()
+    ]
     return status, lines[0] if lines else ""
 
 
@@ -278,9 +289,9 @@ def package_versions(environment: str) -> Dict[str, str]:
     Returns:
         A mapping of package name to resolved version.
     """
-    status, stdout, _ = run_full(
-        f"micromamba list -n {environment} --json", environment
-    )
+    # Not run inside the environment: `micromamba list` is the environment
+    # manager's own command and reads the prefix directly.
+    status, stdout, _ = run_full(f"micromamba list -n {environment} --json")
     if status != 0 or not stdout.strip():
         return {}
     try:
@@ -316,7 +327,7 @@ def package_listing(environment: str) -> List[str]:
     Returns:
         The listing lines, without the banner `micromamba list` prints.
     """
-    status, stdout, _ = run_full(f"micromamba list -n {environment}", environment)
+    status, stdout, _ = run_full(f"micromamba list -n {environment}")
     if status != 0:
         return []
     lines = [line.rstrip() for line in stdout.splitlines() if line.strip()]

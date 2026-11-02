@@ -103,11 +103,16 @@ jobs:
       - name: Build
         run: |
           set -euo pipefail
-          # a plain, cached build: this is the check that every pin resolves
-          # and a no-cache build, because P01-01.2 asks specifically whether the
-          # image builds from a clean cache
-          docker build -t aplysia-neuroexpressome:test .
-          docker build --no-cache -t aplysia-neuroexpressome:nocache .
+          # One build, explicitly from a clean cache: P01-01.2 asks whether
+          # the image builds from a clean cache, and a runner starts with no
+          # Docker cache at all, so --no-cache is the honest way to say it.
+          #
+          # This job used to build twice, once cached and once not. It ran
+          # the runner out of disk: the annotation on the failed run reads
+          # "No space left on device". The second build is now the separate
+          # `rebuild` job, which has a runner of its own, so each job builds
+          # once and neither has to hold two images at the same time.
+          docker build --no-cache -t aplysia-neuroexpressome:test .
 
       - name: List the environments in the image
         run: python3 scripts/environments.py > environments.tsv
@@ -135,12 +140,6 @@ jobs:
           docker run --rm aplysia-neuroexpressome:test \
             /opt/aplysia/bin/environment.sh > environment.txt
           cat environment.txt
-
-      - name: Emit the manifest of the no-cache build
-        run: |
-          set -euo pipefail
-          docker run --rm aplysia-neuroexpressome:nocache \
-            /opt/aplysia/bin/environment.sh > environment-nocache.txt
 
       - name: Fail if any pinned tool is missing
         run: |
