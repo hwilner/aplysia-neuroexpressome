@@ -1,0 +1,9 @@
+{
+  "image": "ghcr.io/hwilner/aplysia-neuroexpressome",
+  "digest": "sha256:e0de634dc51a5f040db33e09b7dadad44796c247d5a440a1cfd2b7e09d733860",
+  "tag": "sha-e0e0d02",
+  "commit": "e0e0d022a487a1eab06076173b002c7a97a6b7ca",
+  "released_utc": "2026-11-04T13:57:28Z",
+  "manifest": "docs/released-manifest.txt",
+  "closure_drift": "true"
+}

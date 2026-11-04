@@ -26,12 +26,19 @@ Not started. The pre-registration is committed before any analysis exists; that 
 
 | | |
 |---|---|
-| Image | *not released yet* |
-| Digest | *not released yet* |
-| Tag | *not released yet* |
-| Built from commit | *not released yet* |
-| Released | *not released yet* |
-| Tool manifest | *not released yet* |
+| Image | `ghcr.io/hwilner/aplysia-neuroexpressome` |
+| Digest | `sha256:e0de634dc51a5f040db33e09b7dadad44796c247d5a440a1cfd2b7e09d733860` |
+| Tag | sha-e0e0d02 |
+| Built from commit | e0e0d022a487a1eab06076173b002c7a97a6b7ca |
+| Released | 2026-11-04T13:57:28Z |
+| Tool manifest | `docs/released-manifest.txt` |
+| Package closure | moved since the verified build — see `docs/closure-drift.txt` |
+
+Pull it with:
+
+```bash
+docker pull ghcr.io/hwilner/aplysia-neuroexpressome@sha256:e0de634dc51a5f040db33e09b7dadad44796c247d5a440a1cfd2b7e09d733860
+```
 
 <!-- END RELEASED IMAGE -->
 
