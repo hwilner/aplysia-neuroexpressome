@@ -75,11 +75,14 @@
 ## Reproducibility
 
 **Table 7. Release checklist.** Completed at Zenodo release (task P01-22).
+The container image digest was recorded by the release workflow on
+2026-11-04 and is the digest of what was actually pushed; the remaining
+rows are filled at the Zenodo release.
 
 | Item | Value |
 |---|---|
 | Concept DOI | *Pending* |
-| Container image digest | *Pending* |
+| Container image digest | `sha256:e0de634dc51a5f040db33e09b7dadad44796c247d5a440a1cfd2b7e09d733860` |
 | `reproduce.sh` clean-clone run | *Pending* |
 | Catalogue licence | CC0 |
 
