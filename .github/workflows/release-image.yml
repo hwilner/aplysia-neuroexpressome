@@ -1,0 +1,131 @@
+name: release the analysis image
+
+# P01-01.4 - push the image and record the digest in the README.
+#
+# The digest of the released image is not the digest of a test image built on
+# a runner. It is the digest of what someone else would actually pull, and
+# it is the thing that makes a result reproducible months later. So it is
+# written into the README by the run that pushes the image, and never by
+# hand.
+#
+# The workflow also checks that the released image contains the tool
+# versions that were verified in P01-01.3, by pulling the pushed image back
+# by its digest and diffing its manifest against the recorded one. If the
+# pins no longer resolve to the same versions, the release fails rather than
+# publishing a digest for an environment nobody checked.
+#
+# A push made with GITHUB_TOKEN does not trigger further workflow runs, so
+# the commit that writes the README cannot loop.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'scripts/manifest.py'
+      - 'scripts/record_release.py'
+      - '.github/workflows/release-image.yml'
+
+permissions:
+  contents: write   # to write the digest into the README
+  packages: write   # to push the image
+
+jobs:
+  release:
+    name: push the image and record its digest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to the container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        run: |
+          set -euo pipefail
+          # The image name is the repository, and the tag is the commit.
+          # A tag is mutable and a digest is not, so the digest is what
+          # gets recorded; the tag is there so a human can pull the thing
+          # this build produced without looking the digest up.
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+          echo "TAG=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          docker build --no-cache -t "$IMAGE:$TAG" .
+
+      - name: Push
+        run: |
+          set -euo pipefail
+          docker push "$IMAGE:$TAG" | tee push.log
+          # The digest of what was pushed, taken from the push itself.
+          digest=$(grep -oE 'digest: sha256:[0-9a-f]{64}' push.log | head -1 | cut -d' ' -f2)
+          if [ -z "$digest" ]; then
+            digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE:$TAG" | cut -d'@' -f2)
+          fi
+          if [ -z "$digest" ]; then
+            echo "::error::could not read the digest of the pushed image"
+            exit 1
+          fi
+          echo "DIGEST=$digest" >> "$GITHUB_ENV"
+          echo "released $IMAGE@$digest"
+
+      - name: Verify the released image against the verified manifest
+        run: |
+          set -euo pipefail
+          # Pull back what was just pushed, by digest, and check it holds
+          # the tool versions that were verified in P01-01.3.
+          docker pull "$IMAGE@$DIGEST"
+          docker run --rm "$IMAGE@$DIGEST" \
+            /opt/aplysia/bin/environment.sh > released-manifest.txt
+          python3 scripts/diff_manifests.py \
+            docs/manifest-build-1.txt released-manifest.txt
+          cp released-manifest.txt docs/released-manifest.txt
+
+      - name: Write the release record
+        run: |
+          set -euo pipefail
+          cat > release.json <<JSON
+          {
+            "image": "$IMAGE",
+            "digest": "$DIGEST",
+            "tag": "$TAG",
+            "commit": "$GITHUB_SHA",
+            "released_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "manifest": "docs/released-manifest.txt"
+          }
+          JSON
+          python3 -c "import json;print(json.load(open('release.json')))"
+          python3 scripts/record_release.py --record release.json --readme README.md
+          cp release.json docs/release-record.json
+
+      - name: Make the package public
+        run: |
+          set -uo pipefail
+          # A package pushed to the registry is private by default, and a
+          # private image cannot be pulled by the reader this project is
+          # for. The GITHUB_TOKEN may not be allowed to change visibility,
+          # so a failure here is a warning rather than an error: the
+          # digest is still recorded either way, and the visibility is
+          # set from the account that owns it.
+          curl -sS -L -X PATCH \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/user/packages/container/aplysia-neuroexpressome" \
+            -d '{"visibility":"public"}' \
+            -w '\nHTTP %{http_code}\n' || true
+
+      - name: Commit the release record
+        run: |
+          set -euo pipefail
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git add README.md docs/release-record.json docs/released-manifest.txt
+          if git diff --cached --quiet; then
+            echo "nothing changed; the README already records this release"
+            exit 0
+          fi
+          git commit -m "P01-01.4: release the analysis image at $DIGEST"
+          git push origin HEAD:main

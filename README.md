@@ -18,6 +18,28 @@ Copies of the first and third also live in [`docs/`](docs/) for tools that expec
 
 Not started. The pre-registration is committed before any analysis exists; that commit is the evidence.
 
+## The released image
+
+<!-- BEGIN RELEASED IMAGE -->
+
+<!-- Written by scripts/record_release.py from the release record. Do not edit by hand. -->
+
+| | |
+|---|---|
+| Image | *not released yet* |
+| Digest | *not released yet* |
+| Tag | *not released yet* |
+| Built from commit | *not released yet* |
+| Released | *not released yet* |
+| Tool manifest | *not released yet* |
+
+<!-- END RELEASED IMAGE -->
+
+No image has been released. The digest is written here by the release
+workflow, from the same run that pushes the image, so that it cannot be
+transcribed wrongly. A digest typed by hand is a claim of reproducibility
+that can be false.
+
 ## Ground rules
 
 1. The pre-registration is not amended. Later changes are logged as `deviation-log` issues, and stated in the manuscript.
