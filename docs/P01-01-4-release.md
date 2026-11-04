@@ -135,3 +135,45 @@ as the image verified in P01-01.3. And it records the drift in the
 transitive closure, so that the difference between "reproducible" and
 "reproducible if the lock file is used" is written down rather than
 assumed.
+
+## The release as it stands
+
+| | |
+|---|---|
+| Image | `ghcr.io/hwilner/aplysia-neuroexpressome` |
+| Digest | `sha256:a18d6914ecdd9ce12d906adf2976a2f773fad14af536fe8dfd4362e6fade125b` |
+| Tag | `sha-14370da` |
+| Visibility | public |
+| Pull | `docker pull ghcr.io/hwilner/aplysia-neuroexpressome@sha256:a18d6914e…` |
+| Tool versions | identical to the manifest verified in P01-01.3 — all 26 |
+| Package closure | moved; recorded in `docs/closure-drift.txt` |
+
+Verified from outside the workflow: the registry serves that digest to an
+**anonymous** pull, and its own `docker-content-digest` header is the digest
+the README records. The digest was written by the run that pushed the image,
+so it cannot have been transcribed wrongly.
+
+Three images are in the registry: `sha-36527be` from the first attempt,
+which failed on the unbound variable; `sha-e0e0d02` from the second, which
+pushed successfully and then failed the over-strict verification; and
+`sha-14370da`, the release.
+
+## One wart worth naming
+
+The release workflow triggers on a push that touches the Dockerfile or the
+scripts that write the record. It does **not** trigger on a change to the
+release workflow's own file, and that is deliberate.
+
+Every release rebuilds the image, and a rebuild produces a new digest even
+when the content is identical, because the image config carries a creation
+timestamp. So a workflow that re-released on every edit to itself would
+republish the image and move the digest recorded in the README, in
+`results.md` and in the programme's `STATUS.md` — three places to keep in
+step, for no change to the software. Re-running it by hand is
+`workflow_dispatch`.
+
+This is a real limitation, not a workaround: the image is not bit-for-bit
+reproducible, so "rebuild and compare digests" is not a reproducibility
+test. What P01-01.3 established — that the *tool versions* agree across
+independent builds — is the meaningful claim, and P01-01.5 will make the
+byte-level claim true as well by pinning the closure.

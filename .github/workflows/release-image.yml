@@ -22,10 +22,18 @@ on:
   push:
     branches: [main]
     paths:
+      # The release is triggered by a change to the image or to what is
+      # recorded about it, and by nothing else. The release workflow's own
+      # file is deliberately not in this list: every release rebuilds the
+      # image, and a rebuild produces a new digest even when the content is
+      # identical, so including it would make every edit to this file
+      # republish the image and move the digest that is recorded in the
+      # README, in results.md and in the programme's STATUS.md. To re-run
+      # it by hand, use workflow_dispatch.
       - 'Dockerfile'
       - 'scripts/manifest.py'
       - 'scripts/record_release.py'
-      - '.github/workflows/release-image.yml'
+      - 'scripts/diff_manifests.py'
 
 permissions:
   contents: write   # to write the digest into the README
