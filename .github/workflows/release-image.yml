@@ -52,9 +52,19 @@ jobs:
           # A tag is mutable and a digest is not, so the digest is what
           # gets recorded; the tag is there so a human can pull the thing
           # this build produced without looking the digest up.
-          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
-          echo "TAG=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
-          docker build --no-cache -t "$IMAGE:$TAG" .
+          #
+          # The variables are set in the shell as well as being exported.
+          # Writing to $GITHUB_ENV makes a variable available to the *later*
+          # steps, not to the rest of this one: the first version of this
+          # step exported IMAGE and then read "$IMAGE" in the same block,
+          # and with `set -u` that is an unbound variable and a failed
+          # build. The local names are lower case so that they cannot be
+          # confused with the exported ones.
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          tag="sha-${GITHUB_SHA::7}"
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          docker build --no-cache -t "$image:$tag" .
 
       - name: Push
         run: |
