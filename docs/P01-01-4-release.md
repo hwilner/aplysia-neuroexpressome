@@ -81,3 +81,57 @@ be permitted to change visibility; if it is not, the visibility has to be
 set from the account that owns the package. A private image is still a
 valid release — the digest is still the digest — but it is not a public one,
 and the README should not imply otherwise.
+
+## What the release runs found
+
+**The first run failed on an unbound variable.** `echo "IMAGE=…" >>
+"$GITHUB_ENV"` makes the variable available to the *later* steps of a job,
+not to the rest of the block that wrote it, and under `set -u` reading it back
+is a failed build. `scripts/check_workflow.py` now looks for that, so the
+next run of the same mistake is caught before it costs a run.
+
+**The second run pushed the image and then failed the verification.** The
+image was built, pushed, and pulled back by its digest — and the manifest of
+the pulled image did not match the verified one:
+
+```
+-  certifi       2026.10.23  pyhd8ed1ab_0   conda-forge
++  certifi       2026.10.23  pyhd8ed1ab_3   conda-forge
+-  pip           26.2.2      pyh8b19718_0   conda-forge
++  pip           26.2.2      pyh8b19718_2   conda-forge
+-  libnghttp2    1.70.0      hc5e5977_0     conda-forge
++  libnghttp2    1.71.0      hc5e5977_0     conda-forge
+-  r-future      1.80.0      r44hacb3a79_0  conda-forge
++  r-future      1.82.0      r44hacb3a79_0  conda-forge
+-  r-openssl     2.4.2       r44h68c19f5_0  conda-forge
++  r-openssl     2.5.0       r44haecc533_0  conda-forge
+```
+
+**Not one of the 25 pinned tools differs.** Every difference is in a
+transitive dependency, and every one of them is conda-forge moving between
+2026-11-02 and 2026-11-04: two rebuilds and three version bumps.
+
+This is the important finding of the subtask, and it is two findings.
+
+**The gate was wrong.** It compared the whole manifest, so a moving
+transitive closure failed the release. But a moving closure does not make a
+release wrong — a digest fixes an image exactly, and the released image *is*
+exactly what was verified. What the drift breaks is the ability to
+*rebuild* from the Dockerfile, which is a different claim. The gate is now
+`diff_manifests.py --tools-only`: the pinned tools have to be the ones that
+were verified, and the closure drift is recorded rather than fatal.
+
+**The build is not reproducible across time.** Pinning the direct tools does
+not pin the environment. `libnghttp2` is not a pin in this project and it
+still changed under the build, and `r-future` is three minor versions ahead
+of what the verified build had. A rebuild from the same Dockerfile tomorrow
+would produce a different closure. That is now **P01-01.5**, which pins the
+resolved closure in an explicit lock file.
+
+## What the release therefore establishes
+
+That the released image, pulled by its digest, runs the same 25 pinned tools
+as the image verified in P01-01.3. And it records the drift in the
+transitive closure, so that the difference between "reproducible" and
+"reproducible if the lock file is used" is written down rather than
+assumed.

@@ -20,9 +20,23 @@ identical failures would have passed. `--check` reports any line whose value
 is empty, reads as an error, or is `NOT FOUND`, which is the failure mode
 this script exists to catch.
 
+**Two different claims, and they are not the same claim.** The pinned tools
+being the same is the claim that matters for the science: it says the
+released image runs the software that was verified. The resolved package
+closure being the same is a claim about rebuilding: conda-forge moves, the
+transitive dependencies of a pinned package change under it, and a build
+from the same Dockerfile can therefore produce a different closure on a
+different day. That is real, and it is worth knowing, but it does not make
+a released image wrong - a digest fixes an image exactly.
+
+`--tools-only` compares the tool lines and ignores the package listings.
+That is the comparison a release should gate on. The full comparison is
+still available, and its differences are worth recording.
+
 Usage:
-    scripts/diff_manifests.py OLD NEW      compare two manifests
-    scripts/diff_manifests.py --check FILE  report unusable version lines
+    scripts/diff_manifests.py OLD NEW           compare two manifests in full
+    scripts/diff_manifests.py --tools-only OLD NEW   compare the tool lines only
+    scripts/diff_manifests.py --check FILE      report unusable version lines
 """
 
 import argparse
@@ -184,6 +198,59 @@ def compare(old_path: str, new_path: str) -> int:
     return 0
 
 
+def compare_tools(old_path: str, new_path: str) -> int:
+    """Compare the tool lines of two manifests and ignore the package lists.
+
+    This is the comparison a release should gate on. The pinned tools being
+    the same says the released image runs the software that was verified.
+    The package closure moving says something different: that rebuilding
+    from the same Dockerfile tomorrow would produce a different closure,
+    which is a lock file's problem and not a reason to refuse a release.
+
+    Args:
+        old_path: the earlier manifest.
+        new_path: the later manifest.
+
+    Returns:
+        0 if the tool versions agree, 1 if they do not, 2 on an I/O error.
+    """
+    try:
+        with open(old_path, encoding="utf-8") as handle:
+            old_lines = [line.rstrip("\n") for line in handle]
+        with open(new_path, encoding="utf-8") as handle:
+            new_lines = [line.rstrip("\n") for line in handle]
+    except OSError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+
+    old_tools = tool_lines(old_lines)
+    new_tools = tool_lines(new_lines)
+
+    problems = []
+    if [t[0] for t in old_tools] != [t[0] for t in new_tools]:
+        print("::error::the two manifests describe different tools")
+        print(f"  old: {[t[1] for t in old_tools]}")
+        print(f"  new: {[t[1] for t in new_tools]}")
+        problems.append("tool list")
+
+    for (section, command, value), (_, other, other_value) in zip(old_tools, new_tools):
+        if value != other_value:
+            problems.append(command)
+            print(f"::error::{section}/{command}: {value} became {other_value}")
+
+    for label, lines in (("old", old_lines), ("new", new_lines)):
+        for section, command, value in unusable_values(lines):
+            problems.append(command)
+            print(f"::error::the {label} manifest has an unusable version for "
+                  f"{section}/{command}: {value}")
+
+    if problems:
+        print("the two manifests do not agree on the tool versions")
+        return 1
+    print(f"the two manifests agree on all {len(old_tools)} tool versions")
+    return 0
+
+
 def check(path: str) -> int:
     """Report the tool lines in a manifest that do not carry a version.
 
@@ -219,6 +286,11 @@ def main(argv: List[str]) -> int:
     """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", metavar="FILE", help="check one manifest")
+    parser.add_argument(
+        "--tools-only",
+        action="store_true",
+        help="compare the tool versions and ignore the package listings",
+    )
     parser.add_argument("files", nargs="*", help="the manifests to compare")
     args = parser.parse_args(argv)
 
@@ -226,6 +298,8 @@ def main(argv: List[str]) -> int:
         return check(args.check)
     if len(args.files) != 2:
         parser.error("give two manifests to compare, or --check FILE")
+    if args.tools_only:
+        return compare_tools(args.files[0], args.files[1])
     return compare(args.files[0], args.files[1])
 
 

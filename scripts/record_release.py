@@ -38,6 +38,7 @@ FIELDS = (
     ("Built from commit", "commit"),
     ("Released", "released_utc"),
     ("Tool manifest", "manifest"),
+    ("Package closure", "closure_drift"),
 )
 
 
@@ -61,6 +62,14 @@ def render(record: dict) -> str:
     ]
     for label, key in FIELDS:
         value = record.get(key, "")
+        if key == "closure_drift":
+            if value == "true":
+                value = ("moved since the verified build — see "
+                         "`docs/closure-drift.txt`")
+            elif value == "false":
+                value = "unchanged since the verified build"
+            else:
+                value = "not recorded"
         if key == "digest" and value:
             value = f"`{value}`"
         elif key in ("image", "manifest") and value:

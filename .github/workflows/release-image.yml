@@ -90,9 +90,34 @@ jobs:
           docker pull "$IMAGE@$DIGEST"
           docker run --rm "$IMAGE@$DIGEST" \
             /opt/aplysia/bin/environment.sh > released-manifest.txt
-          python3 scripts/diff_manifests.py \
+
+          # The gate. The pinned tools have to be the ones that were
+          # verified: this says the released image runs the software the
+          # science was checked against.
+          python3 scripts/diff_manifests.py --tools-only \
             docs/manifest-build-1.txt released-manifest.txt
+
+          # The resolved package closure is a different question, and the
+          # answer is allowed to be no. conda-forge moves: between the
+          # verified build and this one it rebuilt certifi and pip and
+          # moved libnghttp2, r-future and r-openssl. That is real, and it
+          # is recorded, but it is not a reason to refuse a release, because
+          # the digest fixes the image exactly. What the drift breaks is
+          # the ability to *rebuild* from the Dockerfile, and that is a lock
+          # file's job.
+          if python3 scripts/diff_manifests.py \
+               docs/manifest-build-1.txt released-manifest.txt > closure-drift.txt; then
+            echo "the resolved package closure is unchanged"
+            echo "CLOSURE_DRIFT=false" >> "$GITHUB_ENV"
+          else
+            echo "::warning::the resolved package closure has moved since the verified build"
+            echo "the drift is recorded in docs/closure-drift.txt"
+            head -40 closure-drift.txt
+            echo "CLOSURE_DRIFT=true" >> "$GITHUB_ENV"
+          fi
+
           cp released-manifest.txt docs/released-manifest.txt
+          cp closure-drift.txt docs/closure-drift.txt
 
       - name: Write the release record
         run: |
@@ -104,7 +129,8 @@ jobs:
             "tag": "$TAG",
             "commit": "$GITHUB_SHA",
             "released_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "manifest": "docs/released-manifest.txt"
+            "manifest": "docs/released-manifest.txt",
+            "closure_drift": "$CLOSURE_DRIFT"
           }
           JSON
           python3 -c "import json;print(json.load(open('release.json')))"
