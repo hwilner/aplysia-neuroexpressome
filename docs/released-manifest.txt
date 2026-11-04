@@ -1,5 +1,5 @@
 # environment manifest - generated at image build time
-built: 2026-11-04T13:54:01Z
+built: 2026-11-04T14:02:06Z
 
 ## env: bio
 python                 Python 3.11.9

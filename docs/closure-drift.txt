@@ -1,8 +1,8 @@
-compared docs/manifest-build-1.txt with docs/released-manifest.txt
+compared docs/manifest-build-1.txt with released-manifest.txt
 excluded 1 build-timestamp line(s) from each manifest
 
 --- docs/manifest-build-1.txt
-+++ docs/released-manifest.txt
++++ released-manifest.txt
 @@ -40,7 +40,7 @@
    ca-certificates              2026.10.23    hbd8a1cb_0             conda-forge
    cairo                        1.18.0        h3faef2a_0             conda-forge
