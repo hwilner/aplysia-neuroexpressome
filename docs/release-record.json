@@ -1,9 +1,9 @@
 {
   "image": "ghcr.io/hwilner/aplysia-neuroexpressome",
-  "digest": "sha256:a18d6914ecdd9ce12d906adf2976a2f773fad14af536fe8dfd4362e6fade125b",
-  "tag": "sha-14370da",
-  "commit": "14370dabc8041f2f1c1afbd8d52de6a224bbe207",
-  "released_utc": "2026-11-04T14:07:32Z",
+  "digest": "sha256:3bf4416d3dc36a5feb99d988f566498881650d5cb985723c6cd744bef3c0344d",
+  "tag": "sha-6fe3061",
+  "commit": "6fe3061978c8d9b76728a2c29be3626c5c33514d",
+  "released_utc": "2026-11-06T14:38:13Z",
   "manifest": "docs/released-manifest.txt",
   "closure_drift": "true"
 }
