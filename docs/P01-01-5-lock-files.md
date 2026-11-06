@@ -155,11 +155,33 @@ still a property of the build, not of the content. Comparing digests across
 builds remains the wrong test, and the release workflow keeps recording the
 digest of the run that actually pushed the image.
 
-**The locks were resolved outside the image.** They were solved on 2026-11-06
-with micromamba 2.10.0, while the image pins micromamba 2.9.0. The explicit
-format is stable across both, and the build check above is what proves the
-image accepts these locks. Until that check has run in CI, the locks are
-verified locally and not yet verified in the image.
+## What the build proved
+
+The build that carried these locks ran on 2026-11-06, and every check in it
+passed:
+
+| check | result |
+|---|---|
+| the lock satisfies the pins | all four environments |
+| the lock installs | all four environments |
+| the closure inside the built image equals the lock | 285, 18, 300 and 125 packages, identical |
+| the two independent builds agree on the tool versions | all 26 |
+| the pinned tool versions match the P01-01.3 manifest | all 26 |
+
+The image was then released as
+`sha256:3bf4416d3dc36a5feb99d988f566498881650d5cb985723c6cd744bef3c0344d`,
+tag `sha-6fe3061`, and the closure in the pushed image was compared against
+the lock file again, from the release run, with the same result.
+
+The locks were resolved with micromamba 2.10.0, while the image pins
+micromamba 2.9.0. The explicit format is stable across both, and the build
+is what proved the image accepts these locks.
+
+**What the build did not prove:** that the image is reproducible. It proved
+that the environment is. The digest still moves, because the image's
+configuration carries a creation timestamp, so the image built from this lock
+on 2026-11-06 and the image built from the same lock on any other day have
+the same closure and different digests.
 
 ## Files
 

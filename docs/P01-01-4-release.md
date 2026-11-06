@@ -148,6 +148,14 @@ assumed.
 | Tool versions | identical to the manifest verified in P01-01.3 — all 26 |
 | Package closure | moved; recorded in `docs/closure-drift.txt` |
 
+> **Re-released 2026-11-06.** P01-01.5 changed the Dockerfile, so the image was
+> built and pushed again, this time from the lock files. The current digest is
+> `sha256:3bf4416d3dc36a5feb99d988f566498881650d5cb985723c6cd744bef3c0344d`
+> (tag `sha-6fe3061`), and its closure is exactly the one in `lock/`. The
+> digest above is the one released during P01-01.4, before the lock existed,
+> and is kept here as the record of that release. See
+> [`P01-01-5-lock-files.md`](P01-01-5-lock-files.md).
+
 Verified from outside the workflow: the registry serves that digest to an
 **anonymous** pull, and its own `docker-content-digest` header is the digest
 the README records. The digest was written by the run that pushed the image,

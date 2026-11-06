@@ -76,18 +76,22 @@
 
 **Table 7. Release checklist.** Completed at Zenodo release (task P01-22).
 The container image digest was recorded by the release workflow on
-2026-11-04 and is the digest of what was actually pushed:
-`sha256:e0de634dc51a5f040db33e09b7dadad44796c247d5a440a1cfd2b7e09d733860`. The remaining rows are filled at the Zenodo release.
+2026-11-06 and is the digest of what was actually pushed:
+`sha256:3bf4416d3dc36a5feb99d988f566498881650d5cb985723c6cd744bef3c0344d`. The remaining rows are filled at the Zenodo release.
 
 The image is at `ghcr.io/hwilner/aplysia-neuroexpressome`, pullable by that
 digest without authentication. Its 26 pinned tool versions are identical to
-the manifest verified in P01-01.3; the transitive package closure was not,
-and the difference is recorded in `docs/closure-drift.txt`.
+the manifest verified in P01-01.3, and its package closure is exactly the one
+recorded in `lock/`: the build that produced the image compares the closure
+inside it against the lock file and fails if they differ. The earlier
+release, whose closure had drifted from the P01-01.3 build, is recorded in
+`docs/closure-drift.txt`.
 
 | Item | Value |
 |---|---|
 | Concept DOI | *Pending* |
-| Container image digest | `sha256:a18d6914ecdd9ce12d906adf2976a2f773fad14af536fe8dfd4362e6fade125b` |
+| Container image digest | `sha256:3bf4416d3dc36a5feb99d988f566498881650d5cb985723c6cd744bef3c0344d` |
+| Package closure | pinned by `lock/` — 285, 18, 300 and 125 packages, verified against the built image |
 | `reproduce.sh` clean-clone run | *Pending* |
 | Catalogue licence | CC0 |
 
