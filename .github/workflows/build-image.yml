@@ -18,6 +18,8 @@ on:
       - 'scripts/manifest.py'
       - 'scripts/diff_manifests.py'
       - 'scripts/requirements.py'
+      - 'scripts/lock.py'
+      - 'lock/**'
   workflow_dispatch:
 
 # Least privilege: the workflow only needs to read the tree.
@@ -67,14 +69,51 @@ jobs:
             | tar -xvj bin/micromamba
           echo "$PWD/bin" >> "$GITHUB_PATH"
 
-      - name: Solve the environment
+      # The lock is what the image is built from, so the lock is what has to
+      # work. A lock that no longer satisfies the pins has drifted away from
+      # the declaration of intent, and a lock that will not install would fail
+      # the build much later, with a much less obvious message.
+      - name: Check the lock against the pins
         env:
           ENVIRONMENT_NAME: ${{ matrix.environment.name }}
           ENVIRONMENT_PINS: ${{ matrix.environment.pins }}
         run: |
           set -euo pipefail
+          test -f "lock/$ENVIRONMENT_NAME.txt" || {
+            echo "::error::there is no lock/$ENVIRONMENT_NAME.txt for the $ENVIRONMENT_NAME environment"
+            exit 1
+          }
+          python3 scripts/lock.py check \
+            --env "$ENVIRONMENT_NAME" \
+            --pins "$ENVIRONMENT_PINS" \
+            --lock "lock/$ENVIRONMENT_NAME.txt"
+
+      - name: Install from the lock
+        env:
+          ENVIRONMENT_NAME: ${{ matrix.environment.name }}
+        run: |
+          set -euo pipefail
           micromamba create -y -n "$ENVIRONMENT_NAME" \
-            -c conda-forge -c bioconda $ENVIRONMENT_PINS
+            --file "lock/$ENVIRONMENT_NAME.txt"
+
+      # The pins still have to solve, or the lock cannot be regenerated when
+      # the closure has to move. This is advisory: the image is built from
+      # the lock, so a pin the channels have dropped does not break the
+      # image - it only narrows what can be done later. It is reported as a
+      # warning rather than swallowed, because a pin that silently stopped
+      # solving is exactly the kind of drift this subtask exists to stop.
+      - name: Solve the environment from the pins
+        continue-on-error: true
+        env:
+          ENVIRONMENT_NAME: ${{ matrix.environment.name }}
+          ENVIRONMENT_PINS: ${{ matrix.environment.pins }}
+        run: |
+          set -uo pipefail
+          if ! micromamba create -y -n "resolve_$ENVIRONMENT_NAME" \
+               -c conda-forge -c bioconda $ENVIRONMENT_PINS; then
+            echo "::warning::the pins for $ENVIRONMENT_NAME no longer solve in the channels."
+            echo "::warning::the image still builds from the lock, but the lock cannot be regenerated."
+          fi
 
       # The solver names the package it cannot install but not the
       # requirement that rules it out, so ask the package index for the
@@ -129,6 +168,25 @@ jobs:
             if ! docker run --rm aplysia-neuroexpressome:test \
                  micromamba run -n "$env" bash -c 'echo "solvable and present"'; then
               echo "::error::The $env environment is not usable in the built image."
+              status=1
+            fi
+          done < environments.tsv
+          exit "$status"
+
+      # The definition of done for P01-01.5: the image is built from the lock.
+      # This is where that is checked, by asking the built image for the
+      # closure it actually has and comparing it with the lock.
+      - name: Check the image against the lock
+        run: |
+          set -euo pipefail
+          status=0
+          while IFS=$'\t' read -r env pins; do
+            echo "=== env: $env ==="
+            docker run --rm aplysia-neuroexpressome:test \
+              micromamba list -n "$env" --explicit > "resolved-$env.txt"
+            if ! python3 scripts/lock.py compare \
+                 --lock "lock/$env.txt" --from "resolved-$env.txt"; then
+              echo "::error::the $env environment in the image does not match lock/$env.txt"
               status=1
             fi
           done < environments.tsv

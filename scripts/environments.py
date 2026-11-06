@@ -14,9 +14,10 @@ Usage:
 
 import argparse
 import json
+import re
 import shlex
 import sys
-from typing import Dict, List, NamedTuple
+from typing import Dict, List, NamedTuple, Tuple
 
 
 class Environment(NamedTuple):
@@ -33,20 +34,65 @@ class Environment(NamedTuple):
 
 def logical_lines(text: str) -> List[str]:
     """Return the Dockerfile instructions, joining backslash continuations."""
-    lines: List[str] = []
+    return [line for _, line in logical_lines_with_index(text)]
+
+
+def logical_lines_with_index(text: str) -> List[Tuple[int, str]]:
+    """Return the Dockerfile instructions and where each one starts.
+
+    The line number matters because the pins of an environment now sit in a
+    comment above its install instruction, and a comment has to be matched
+    to the instruction it belongs to by position rather than by order.
+
+    Args:
+        text: the contents of a Dockerfile.
+
+    Returns:
+        A list of (line number, instruction) pairs.
+    """
+    lines: List[Tuple[int, str]] = []
     pending = ""
-    for raw in text.splitlines():
+    pending_at = 0
+    for number, raw in enumerate(text.splitlines(), start=1):
         stripped = raw.strip()
         if not stripped or stripped.startswith("#"):
             continue
         if pending:
             stripped = f"{pending} {stripped}"
         if stripped.endswith("\\"):
+            if not pending:
+                pending_at = number
             pending = stripped[:-1].strip()
             continue
         pending = ""
-        lines.append(stripped)
+        lines.append((pending_at or number, stripped))
     return lines
+
+
+# A comment that states the direct pins of the environment below it.
+PINS_COMMENT = re.compile(r"^#\s*PINS:\s*(.*)$")
+
+
+def pins_comments(text: str) -> List[Tuple[int, List[str]]]:
+    """Return the pin comments in a Dockerfile and where each one is.
+
+    The pins are the declaration of intent: the direct packages an
+    environment is for. The image is installed from a lock file, which is
+    the resolved closure those pins were solved to, so the pins live in a
+    comment where they are still readable and still checked.
+
+    Args:
+        text: the contents of a Dockerfile.
+
+    Returns:
+        A list of (line number, pins) pairs.
+    """
+    found = []
+    for number, raw in enumerate(text.splitlines(), start=1):
+        match = PINS_COMMENT.match(raw.strip())
+        if match:
+            found.append((number, match.group(1).split()))
+    return found
 
 
 def parse_environments(text: str) -> List[Environment]:
@@ -63,7 +109,8 @@ def parse_environments(text: str) -> List[Environment]:
         The environments, in the order the Dockerfile defines them.
     """
     environments: List[Environment] = []
-    for line in logical_lines(text):
+    comments = pins_comments(text)
+    for number, line in logical_lines_with_index(text):
         tokens = shlex.split(line)
         if not tokens or tokens[0] != "RUN":
             continue
@@ -73,12 +120,23 @@ def parse_environments(text: str) -> List[Environment]:
             continue
         if start + 1 >= len(tokens) or tokens[start + 1] != "create":
             continue
-        environments.append(_environment_from_tokens(tokens[start + 2:]))
+        # The pins belong to the comment above this instruction.
+        above = [pins for where, pins in comments if where < number]
+        declared = above[-1] if above else []
+        environments.append(_environment_from_tokens(tokens[start + 2:], declared))
     return environments
 
 
-def _environment_from_tokens(tokens: List[str]) -> Environment:
-    """Return the environment described by the tokens of one `create` call."""
+def _environment_from_tokens(tokens: List[str], declared: List[str]) -> Environment:
+    """Return the environment described by the tokens of one `create` call.
+
+    Args:
+        tokens: the tokens after `micromamba create`.
+        declared: the pins from the comment above the instruction.
+
+    Returns:
+        The environment.
+    """
     name = ""
     pins: List[str] = []
     index = 0
@@ -91,11 +149,15 @@ def _environment_from_tokens(tokens: List[str]) -> Environment:
             name = tokens[index] if index < len(tokens) else ""
         elif token == "-c":
             index += 1  # A channel, not a pin.
+        elif token == "--file":
+            index += 1  # The lock file, not a pin.
         elif token in ("-y", "--yes"):
             pass
         else:
             pins.append(token)
         index += 1
+    if not pins:
+        pins = list(declared)
     if not name:
         raise ValueError(f"a micromamba create has no environment name: {' '.join(tokens)}")
     if not pins:

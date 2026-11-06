@@ -1,0 +1,36 @@
+# P01-01.5 lock file for the 'tree' environment.
+#
+# The resolved closure of this environment: every package, with its
+# exact version and build string, as an explicit URL. The image is
+# installed from this file, so the closure cannot move under it.
+#
+# Channels: bioconda, conda-forge. Platforms: linux-64.
+#
+# PINS is the declaration of intent: the direct packages this
+# environment is for. It is copied from the Dockerfile, and the pins
+# are checked against the closure below.
+# PINS: mafft=7.525 trimal=1.5.1 iqtree=2.2.6
+#
+# RESOLVED is what the closure actually contains for those pins.
+# RESOLVED: iqtree=2.2.6 mafft=7.525 trimal=1.5.1
+#
+# Install with: micromamba create -y -n tree --file lock/tree.txt
+@EXPLICIT
+https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
+https://conda.anaconda.org/conda-forge/linux-64/gawk-5.4.1-h0a3468a_0.conda
+https://conda.anaconda.org/conda-forge/linux-64/gmp-6.3.0-hfd2156b_3.conda
+https://conda.anaconda.org/bioconda/linux-64/iqtree-2.2.6-h21ec9f0_0.tar.bz2
+https://conda.anaconda.org/conda-forge/linux-64/libasprintf-0.25.1-h0e23cf9_2.conda
+https://conda.anaconda.org/conda-forge/linux-64/libgcc-16.2.0-ha9f2e26_7.conda
+https://conda.anaconda.org/conda-forge/linux-64/libgcc-ng-16.2.0-h69a702a_7.conda
+https://conda.anaconda.org/conda-forge/linux-64/libgettextpo-0.25.1-h0e23cf9_2.conda
+https://conda.anaconda.org/conda-forge/linux-64/libgomp-16.2.0-he0feb66_7.conda
+https://conda.anaconda.org/conda-forge/linux-64/libiconv-1.18-h0cb94f2_3.conda
+https://conda.anaconda.org/conda-forge/linux-64/libstdcxx-16.2.0-h934c35e_7.conda
+https://conda.anaconda.org/conda-forge/linux-64/libstdcxx-ng-16.2.0-hdf11a46_7.conda
+https://conda.anaconda.org/conda-forge/linux-64/libzlib-1.2.13-h4ab18f5_6.conda
+https://conda.anaconda.org/conda-forge/linux-64/mafft-7.525-h56fdecd_0.conda
+https://conda.anaconda.org/conda-forge/linux-64/mpfr-4.2.2-ha2cb11d_1.conda
+https://conda.anaconda.org/conda-forge/linux-64/ncurses-6.6-hdb14827_1.conda
+https://conda.anaconda.org/conda-forge/linux-64/readline-8.3-hd6e31c0_1.conda
+https://conda.anaconda.org/bioconda/linux-64/trimal-1.5.1-h9948957_0.conda

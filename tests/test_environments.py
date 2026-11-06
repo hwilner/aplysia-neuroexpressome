@@ -170,5 +170,49 @@ class SerialisationTest(unittest.TestCase):
         )
 
 
+class LockInstallTest(unittest.TestCase):
+    """Tests for a Dockerfile that installs from a lock file.
+
+    Since P01-01.5 the image is installed from a lock rather than solved
+    for, and the pins moved into a comment above the install. The parser has
+    to read them from there, or the checks that depend on the pins -- the
+    manifest, the lock check in continuous integration -- would see an
+    environment with no pins at all.
+    """
+
+    LOCKED = """
+    FROM mambaorg/micromamba:2.9.0
+    COPY lock/ /opt/aplysia/lock/
+    # PINS: python=3.11 diamond=2.1.8
+    RUN micromamba create -y -n bio --file /opt/aplysia/lock/bio.txt \\
+        && micromamba clean --all --yes
+    # PINS: mafft=7.525
+    RUN micromamba create -y -n tree --file /opt/aplysia/lock/tree.txt \\
+        && micromamba clean --all --yes
+    """
+
+    def test_reads_the_pins_from_the_comment(self):
+        environments = parse_environments(self.LOCKED)
+        self.assertEqual(
+            environments,
+            [
+                Environment("bio", ["python=3.11", "diamond=2.1.8"]),
+                Environment("tree", ["mafft=7.525"]),
+            ],
+        )
+
+    def test_the_lock_path_is_not_mistaken_for_a_pin(self):
+        environments = parse_environments(self.LOCKED)
+        for environment in environments:
+            self.assertNotIn("--file", environment.pins)
+            self.assertNotIn("/opt/aplysia/lock/bio.txt", environment.pins)
+
+    def test_the_real_dockerfile_declares_its_pins(self):
+        environments = parse_environments(open(DOCKERFILE, encoding="utf-8").read())
+        self.assertEqual(len(environments), 4)
+        for environment in environments:
+            self.assertTrue(environment.pins, f"{environment.name} has no pins")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -54,23 +54,25 @@ ENV MAMBA_ROOT_PREFIX=/opt/conda
 ENV MAMBA_DOCKERFILE_ACTIVATE=1
 
 # ---------------------------------------------------------------------
+# The lock files
+# ---------------------------------------------------------------------
+# Each environment is installed from a lock file rather than solved for. The
+# lock names every package in the environment's closure with its exact version
+# and build string, so a rebuild cannot pick up a different closure - which is
+# exactly what happened between the build verified in P01-01.3 and the release
+# in P01-01.4, when five packages moved while none of the pinned tools did.
+#
+# The pins above each install are the declaration of intent. They are checked
+# against the lock by scripts/lock.py, so a lock that stops matching the pins
+# fails rather than passes quietly.
+COPY lock/ /opt/aplysia/lock/
+
+# ---------------------------------------------------------------------
 # env: bio — the analysis tools
 # ---------------------------------------------------------------------
 # biopython 1.83 exists on conda-forge only; bioconda stops at 1.70
-RUN micromamba create -y -n bio \
-        -c conda-forge -c bioconda \
-        python=3.11 \
-        biopython=1.83 \
-        diamond=2.1.8 \
-        liftoff=1.3.0 \
-        busco=5.7.1 \
-        hisat2=2.2.1 \
-        samtools=1.19 \
-        hmmer=3.4 \
-        eggnog-mapper=2.1.9 \
-        orthofinder=2.5.4 \
-        transdecoder=5.7.0 \
-        gffread=0.9.9 \
+# PINS: python=3.11 biopython=1.83 diamond=2.1.8 liftoff=1.3.0 busco=5.7.1 hisat2=2.2.1 samtools=1.19 hmmer=3.4 eggnog-mapper=2.1.9 orthofinder=2.5.4 transdecoder=5.7.0 gffread=0.9.9
+RUN micromamba create -y -n bio --file /opt/aplysia/lock/bio.txt \
     && micromamba clean --all --yes
 
 # ---------------------------------------------------------------------
@@ -84,11 +86,8 @@ RUN micromamba create -y -n bio \
 # Splitting the tree tools out keeps every pin intact and the solve small.
 # This was found by the CI solver, not by inspection: the package exists and
 # the version resolves, so only an actual solve reveals it.
-RUN micromamba create -y -n tree \
-        -c conda-forge -c bioconda \
-        mafft=7.525 \
-        trimal=1.5.1 \
-        iqtree=2.2.6 \
+# PINS: mafft=7.525 trimal=1.5.1 iqtree=2.2.6
+RUN micromamba create -y -n tree --file /opt/aplysia/lock/tree.txt \
     && micromamba clean --all --yes
 
 # ---------------------------------------------------------------------
@@ -129,18 +128,8 @@ RUN micromamba create -y -n tree \
 # (materials-and-methods.md section 2.2) and were missing from the image.
 # lme4 is the mixed-effects model that step 1 of the pre-registered
 # test-selection procedure calls for when observations are not independent.
-RUN micromamba create -y -n r \
-        -c conda-forge -c bioconda \
-        r-base=4.4 \
-        bioconductor-limma=3.62.0 \
-        bioconductor-edger=4.4.0 \
-        r-metafor=4.6_0 \
-        r-lme4=2.0_6 \
-        r-tidyverse=2.0.0 \
-        r-ggplot2=3.5 \
-        r-patchwork=1.2 \
-        r-rstatix=0.7 \
-        r-testthat=3.2 \
+# PINS: r-base=4.4 bioconductor-limma=3.62.0 bioconductor-edger=4.4.0 r-metafor=4.6_0 r-lme4=2.0_6 r-tidyverse=2.0.0 r-ggplot2=3.5 r-patchwork=1.2 r-rstatix=0.7 r-testthat=3.2
+RUN micromamba create -y -n r --file /opt/aplysia/lock/r.txt \
     && micromamba clean --all --yes
 
 # ---------------------------------------------------------------------
@@ -151,10 +140,8 @@ RUN micromamba create -y -n r \
 # InterPro member-database snapshot, so the methods must state it and the
 # catalogue must record it beside every domain hit. Java 11 is required and is
 # pinned for the same reason InterProScan is.
-RUN micromamba create -y -n ips \
-        -c conda-forge -c bioconda \
-        openjdk=11 \
-        interproscan=5.59_91.0 \
+# PINS: openjdk=11 interproscan=5.59_91.0
+RUN micromamba create -y -n ips --file /opt/aplysia/lock/ips.txt \
     && micromamba clean --all --yes
 
 # ---------------------------------------------------------------------
