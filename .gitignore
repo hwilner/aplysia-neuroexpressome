@@ -1,6 +1,16 @@
 # Raw and derived data are released via Zenodo, never committed.
-data/raw/
-data/derived/
+#
+# The directories themselves are tracked - a .gitkeep in each - so that a
+# clean clone has the layout the scripts and the Dockerfile expect. Only
+# their contents are ignored. Ignoring the directory itself, as `data/raw/`
+# did, also hides the .gitkeep inside it: git does not descend into an
+# excluded directory, so the directory would simply be missing from a fresh
+# clone. The `/*` form excludes the contents and leaves the directory, and
+# the negation puts the .gitkeep back.
+/data/raw/*
+!/data/raw/.gitkeep
+/data/derived/*
+!/data/derived/.gitkeep
 *.h5
 *.h5ad
 *.loom
