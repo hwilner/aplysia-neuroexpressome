@@ -7,9 +7,11 @@ stated in the manuscript methods. The pre-registration is not edited silently.
 |---|---|---|
 | D001 | this repository | clusterProfiler dropped; limma and edgeR taken from one Bioconductor generation |
 | D002 | [#27](https://github.com/hwilner/aplysia-neuroexpressome/issues/27) | §2.2 as a whole: the base image, the InterProScan data release, MAFFT and trimAl, and the four-environment split |
+| D003 | [#28](https://github.com/hwilner/aplysia-neuroexpressome/issues/28) | §2.1 names the genome assembly as `GCF_000002075.2`, an accession that does not resolve |
 
-**D002 is open.** `materials-and-methods.md` §2.2 still describes the
-pre-registered toolchain, and it stays that way until the issue is decided.
+**D002 and D003 are open.** `materials-and-methods.md` §2.2 still describes the
+pre-registered toolchain, and §2.1 still names an assembly accession that
+cannot be fetched. Neither is edited until the issue is decided.
 
 ## D001 - clusterProfiler dropped; enrichment is implemented in base R
 
@@ -97,3 +99,48 @@ one `micromamba create`, but only after a solver check confirms the single
 transaction still resolves. The InterProScan data release can be restored by
 installing 5.70-102.0 from the InterProScan distribution instead of conda, at
 the cost of Java 11 and a much longer build.
+
+## D003 - the assembly accession in §2.1 does not resolve
+
+**Date:** 2026-11-10. **Subtask:** P01-02.2. **Affects:** `materials-and-methods.md` §2.1.
+
+**Pre-registered:** the genome assembly as `GCF_000002075.2` (AplCal3.0),
+assembly release 2013.
+
+**Changed:** the assembly is fetched from `GCF_000002075.1`, the RefSeq
+accession for AplCal3.0, as `GCF_000002075.1_AplCal3.0_genomic.fna.gz`. The
+GenBank twin is `GCA_000002075.2`.
+
+**Why:** `GCF_000002075.2` does not exist. It is the RefSeq prefix paired
+with the GenBank version number. Four independent sources give the RefSeq
+accession as `GCF_000002075.1`: the assembly report inside the download
+itself, NCBI's Release 102 annotation readme, the assembly record in NCBI's
+database, and the file path, where the `.2` directory returns HTTP 404.
+
+The assembly itself was never in doubt. AplCal3.0 is one assembly, submitted
+by the Broad Institute on 2013-05-15, and its RefSeq and GenBank copies
+carry identical statistics: 4,331 scaffolds, scaffold N50 917,541, 927,310,431
+bases with the mitochondrion included. The downloaded file was checked
+against NCBI's published MD5, checked with `gzip -t`, and read to confirm
+that every sequence header carries `AplCal3.0`.
+
+**Consequence:** none for the analysis. The same assembly is used, and the
+correct identifier is the only thing that changed. No result has been seen,
+because no analysis has been run. The methods must state the accession that
+was actually used, and the decision on what §2.1 should say is issue #28's.
+
+**The same string is in two other pre-registrations.** Checked rather than
+assumed:
+
+| repository | line | as written |
+|---|---|---|
+| `aplysia-buccatlas` | `materials-and-methods.md` §2.1 | `GCF_000002075.2` + Release 102 |
+| `aplysia-agechannels` | `materials-and-methods.md` §2.1 | `GCF_000002075.2` + RefSeq Release 102 |
+
+`aplysia-tempq10` does not name the assembly and is unaffected. All three
+say the same thing and all three are wrong in the same way. None of them has
+been edited: one decision in issue #28 can settle all three.
+
+**Reversal:** nothing to reverse. The same sequence content is available
+under the GenBank accession, so citing that instead is a one-line change to
+the fetch script and a re-verification of the checksums.
