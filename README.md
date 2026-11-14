@@ -16,7 +16,9 @@ Copies of the first and third also live in [`docs/`](docs/) for tools that expec
 
 ## Status
 
-Not started. The pre-registration is committed before any analysis exists; that commit is the evidence.
+The pre-registration is committed and no analysis has run yet — that commit is
+the evidence. The environment, the released image and the primary inputs are
+in place; the subtask register lives in the programme repository.
 
 ## The released image
 
@@ -42,9 +44,9 @@ docker pull ghcr.io/hwilner/aplysia-neuroexpressome@sha256:3bf4416d3dc36a5feb99d
 
 <!-- END RELEASED IMAGE -->
 
-No image has been released. The digest is written here by the release
-workflow, from the same run that pushes the image, so that it cannot be
-transcribed wrongly. A digest typed by hand is a claim of reproducibility
+The image is released and publicly pullable. The digest is written here by the
+release workflow, from the same run that pushes the image, so that it cannot
+be transcribed wrongly. A digest typed by hand is a claim of reproducibility
 that can be false.
 
 ## Ground rules
