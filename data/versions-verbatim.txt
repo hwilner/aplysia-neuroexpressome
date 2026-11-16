@@ -1,0 +1,40 @@
+=== README_Aplysia_californica_annotation_release_102
+
+     1: ORGANISM NAME:	Aplysia californica
+     2: ORGANISM COMMON NAME:	California sea hare
+     3: TAXID:	6500
+     4: ANNOTATION RELEASE NAME:	NCBI Aplysia californica Annotation Release 102
+     5: ANNOTATION EVIDENCE FREEZE DATE:	18-August-2020
+     6: ANNOTATION RELEASE DATE:	31-August-2020
+     7: ANNOTATION REPORT:	https://www.ncbi.nlm.nih.gov/genome/annotation_euk/Aplysia_californica/102
+    10: ASSEMBLY NAME:	AplCal3.0
+    11: ASSEMBLY ACCESSION:	GCF_000002075.1
+    12: ASSEMBLY SUBMITTER:	Broad Institute
+    13: ASSEMBLY DATE:	15 May 2013
+    14: ASSEMBLY TYPE:	Haploid
+    15: NUMBER OF ASSEMBLY-UNITS:	2
+    18: GCF_000001455.1	Primary Assembly
+    19: GCF_000045755.1	non-nuclear
+=== Aplysia_californica_AR102_annotation_report.xml
+
+     3:   <AssembliesReport target_set_accession="GCF_000422015.1">
+     5:     <Name>AplCal3.0</Name>
+     6:     <Accession>GCF_000002075.1</Accession>
+     7:     <IsReference>Yes</IsReference>
+     8:     <SubmitterOrganization>Broad Institute</SubmitterOrganization>
+     9:     <SubmitterDate>05-15-2013</SubmitterDate>
+    16:         <Name>Primary Assembly</Name>
+    17:         <Accession>GCF_000001455.1</Accession>
+    18:         <IsPrimary>Yes</IsPrimary>
+    19:         <Type>HaploidUnit</Type>
+    22:         <Name>non-nuclear</Name>
+    23:         <Accession>GCF_000045755.1</Accession>
+    24:         <IsPrimary>No</IsPrimary>
+    25:         <Type>HaploidUnit</Type>
+    31:   <Taxid>6500</Taxid>
+    32:   <ScientificName>Aplysia californica</ScientificName>
+    33:   <AnnotationReleaseId>102</AnnotationReleaseId>
+    34:   <FreezeDate>Aug 18 2020</FreezeDate>
+    35:   <FreezeDateId>20200818</FreezeDateId>
+    36:   <IdLoadDate>Aug 31 2020</IdLoadDate>
+    40:   <FtpSite>ftp://ftp.ncbi.nlm.nih.gov/genomes/all/annotation_releases/6500/102</FtpSite>

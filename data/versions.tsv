@@ -1,0 +1,39 @@
+key	value	concept	source_file	source_line	selector
+organism.name.readme	Aplysia californica	organism.scientific_name	README_Aplysia_californica_annotation_release_102	1	tab:2
+organism.common_name.readme	California sea hare	organism.common_name	README_Aplysia_californica_annotation_release_102	2	tab:2
+organism.taxid.readme	6500	organism.taxid	README_Aplysia_californica_annotation_release_102	3	tab:2
+annotation.release_name.readme	NCBI Aplysia californica Annotation Release 102	annotation.release_name	README_Aplysia_californica_annotation_release_102	4	tab:2
+annotation.evidence_freeze_date.readme	18-August-2020	annotation.evidence_freeze_date	README_Aplysia_californica_annotation_release_102	5	tab:2
+annotation.release_date.readme	31-August-2020	annotation.release_date	README_Aplysia_californica_annotation_release_102	6	tab:2
+annotation.report_url.readme	https://www.ncbi.nlm.nih.gov/genome/annotation_euk/Aplysia_californica/102	annotation.report_url	README_Aplysia_californica_annotation_release_102	7	tab:2
+assembly.name.readme	AplCal3.0	assembly.name	README_Aplysia_californica_annotation_release_102	10	tab:2
+assembly.accession.readme	GCF_000002075.1	assembly.accession	README_Aplysia_californica_annotation_release_102	11	tab:2
+assembly.submitter.readme	Broad Institute	assembly.submitter	README_Aplysia_californica_annotation_release_102	12	tab:2
+assembly.date.readme	15 May 2013	assembly.date	README_Aplysia_californica_annotation_release_102	13	tab:2
+assembly.type.readme	Haploid	assembly.type	README_Aplysia_californica_annotation_release_102	14	tab:2
+assembly.unit_count.readme	2	assembly.unit_count	README_Aplysia_californica_annotation_release_102	15	tab:2
+assembly.unit.primary.accession.readme	GCF_000001455.1	assembly.unit.primary.accession	README_Aplysia_californica_annotation_release_102	18	tab:1
+assembly.unit.primary.name.readme	Primary Assembly	assembly.unit.primary.name	README_Aplysia_californica_annotation_release_102	18	tab:2
+assembly.unit.non_nuclear.accession.readme	GCF_000045755.1	assembly.unit.non_nuclear.accession	README_Aplysia_californica_annotation_release_102	19	tab:1
+assembly.unit.non_nuclear.name.readme	non-nuclear	assembly.unit.non_nuclear.name	README_Aplysia_californica_annotation_release_102	19	tab:2
+annotation.target_set_accession.report	GCF_000422015.1	annotation.target_set_accession	Aplysia_californica_AR102_annotation_report.xml	3	xml-attribute:target_set_accession
+assembly.name.report	AplCal3.0	assembly.name	Aplysia_californica_AR102_annotation_report.xml	5	xml-element
+assembly.accession.report	GCF_000002075.1	assembly.accession	Aplysia_californica_AR102_annotation_report.xml	6	xml-element
+assembly.is_reference.report	Yes	assembly.is_reference	Aplysia_californica_AR102_annotation_report.xml	7	xml-element
+assembly.submitter.report	Broad Institute	assembly.submitter	Aplysia_californica_AR102_annotation_report.xml	8	xml-element
+assembly.date.report	05-15-2013	assembly.date	Aplysia_californica_AR102_annotation_report.xml	9	xml-element
+assembly.unit.primary.name.report	Primary Assembly	assembly.unit.primary.name	Aplysia_californica_AR102_annotation_report.xml	16	xml-element
+assembly.unit.primary.accession.report	GCF_000001455.1	assembly.unit.primary.accession	Aplysia_californica_AR102_annotation_report.xml	17	xml-element
+assembly.unit.primary.is_primary.report	Yes	assembly.unit.primary.is_primary	Aplysia_californica_AR102_annotation_report.xml	18	xml-element
+assembly.unit.primary.type.report	HaploidUnit	assembly.unit.primary.type	Aplysia_californica_AR102_annotation_report.xml	19	xml-element
+assembly.unit.non_nuclear.name.report	non-nuclear	assembly.unit.non_nuclear.name	Aplysia_californica_AR102_annotation_report.xml	22	xml-element
+assembly.unit.non_nuclear.accession.report	GCF_000045755.1	assembly.unit.non_nuclear.accession	Aplysia_californica_AR102_annotation_report.xml	23	xml-element
+assembly.unit.non_nuclear.is_primary.report	No	assembly.unit.non_nuclear.is_primary	Aplysia_californica_AR102_annotation_report.xml	24	xml-element
+assembly.unit.non_nuclear.type.report	HaploidUnit	assembly.unit.non_nuclear.type	Aplysia_californica_AR102_annotation_report.xml	25	xml-element
+organism.taxid.report	6500	organism.taxid	Aplysia_californica_AR102_annotation_report.xml	31	xml-element
+organism.scientific_name.report	Aplysia californica	organism.scientific_name	Aplysia_californica_AR102_annotation_report.xml	32	xml-element
+annotation.release_id.report	102	annotation.release_id	Aplysia_californica_AR102_annotation_report.xml	33	xml-element
+annotation.evidence_freeze_date.report	Aug 18 2020	annotation.evidence_freeze_date	Aplysia_californica_AR102_annotation_report.xml	34	xml-element
+annotation.evidence_freeze_date_id.report	20200818	annotation.evidence_freeze_date_id	Aplysia_californica_AR102_annotation_report.xml	35	xml-element
+annotation.id_load_date.report	Aug 31 2020	annotation.release_date	Aplysia_californica_AR102_annotation_report.xml	36	xml-element
+annotation.ftp_site.report	ftp://ftp.ncbi.nlm.nih.gov/genomes/all/annotation_releases/6500/102	annotation.ftp_site	Aplysia_californica_AR102_annotation_report.xml	40	xml-element
