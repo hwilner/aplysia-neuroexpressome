@@ -19,7 +19,7 @@ bytes* of them.
 | Path | `data/manifest.tsv` |
 | Generator | `scripts/make_manifest.sh` |
 | Tests | `tests/test_data_manifest.py` (15 tests) |
-| Rows | 12 files |
+| Rows | 16 files |
 | Tracked | yes — only `data/raw/` and `data/derived/` are ignored |
 
 ## The columns
@@ -27,7 +27,7 @@ bytes* of them.
 | Column | Meaning |
 |---|---|
 | `file` | the name of the file, as it sits in `data/raw/` |
-| `assembly` | the RefSeq accession the file belongs to (`GCF_000002075.1`) |
+| `accession` | the accession the file belongs to: the RefSeq assembly `GCF_000002075.1` for the genome and its annotation, the GenBank TSA project `GJYY00000000` for the transcriptomes |
 | `annotation_release` | the NCBI release the file belongs to |
 | `url` | where it was fetched from |
 | `bytes` | its size |
@@ -63,10 +63,21 @@ The full values are in the manifest itself; the table above truncates them.
 in the manifest because the manifest's `md5` column is taken from it, and a file
 that a checksum column depends on belongs in the checksum record.
 
-**Three files have no published MD5**: the two release-document files, which
-NCBI does not checksum, and `md5checksums.txt`, which cannot list itself. Their
-`md5_source` reads `none published` — it does not read `published by NCBI`, and
-it does not read like a file that was checked against the publisher.
+**Four more rows were added in P01-03.1**, when the AplysiaTools transcriptomes
+were fetched: `new_unigenes.fasta`, `annotation_1A-2C.fasta`,
+`current.annotation.fasta` and `merged.unigenes.trinotate.longest_orf.json`.
+They come from a second publisher, at `http://aplysiatools.org/data/`, and
+belong to the GenBank TSA project `GJYY00000000` rather than to an assembly —
+which is why the column is named `accession` and not `assembly`. The publisher
+serves no checksum for any of them, so their `md5_source` reads
+`none published`.
+
+**Seven files have no published MD5**: the two release-document files, which
+NCBI does not checksum, `md5checksums.txt`, which cannot list itself, and the
+four AplysiaTools transcriptomes, for which the publisher provides no checksum
+at all. Their `md5_source` reads `none published` — it does not read
+`published by NCBI`, and it does not read like a file that was checked against
+the publisher.
 
 ## How to check the inputs against the manifest
 
@@ -77,7 +88,7 @@ cd data/raw
 awk -F'\t' 'NR>1{print $8"  "$1}' ../manifest.tsv | sha256sum -c -
 ```
 
-This reports `OK` for each of the twelve files, and `FAILED` for any file whose
+This reports `OK` for each of the sixteen files, and `FAILED` for any file whose
 bytes have changed. It was checked in both directions: the manifest passes as
 written, and appending a byte to a file turns it into a `FAILED`.
 

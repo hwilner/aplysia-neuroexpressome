@@ -36,49 +36,44 @@ ASSEMBLY_NAME="AplCal3.0"
 RELEASE="NCBI Aplysia californica Annotation Release 102"
 BASE="https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/002/075/${ASSEMBLY}_${ASSEMBLY_NAME}"
 
+# The transcriptome. The pre-registration names the GenBank TSA project
+# the Orvis 2022 assembly was deposited under, and AplysiaTools as the
+# other place to get the same build.
+TSA="GJYY00000000"
+TRANSCRIPTOME="Orvis et al. 2022 CNS transcriptome"
+TOOLS_BASE="http://aplysiatools.org/data"
+
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(dirname "$HERE")"
 RAW="${ROOT}/data/raw"
 OUT="${ROOT}/data/manifest.tsv"
 
 # The files, and what the pre-registration uses each for.
-FILES=(
-  "md5checksums.txt"
-  "${ASSEMBLY}_${ASSEMBLY_NAME}_genomic.fna.gz"
-  "${ASSEMBLY}_${ASSEMBLY_NAME}_genomic.gff.gz"
-  "${ASSEMBLY}_${ASSEMBLY_NAME}_protein.faa.gz"
-  "${ASSEMBLY}_${ASSEMBLY_NAME}_cds_from_genomic.fna.gz"
-  "${ASSEMBLY}_${ASSEMBLY_NAME}_feature_table.txt.gz"
-  "${ASSEMBLY}_${ASSEMBLY_NAME}_genomic_gaps.txt.gz"
-  "${ASSEMBLY}_${ASSEMBLY_NAME}_gene_ontology.gaf.gz"
-  "${ASSEMBLY}_${ASSEMBLY_NAME}_assembly_report.txt"
-  "${ASSEMBLY}_${ASSEMBLY_NAME}_feature_count.txt.gz"
-  "Aplysia_californica_AR102_annotation_report.xml"
-  "README_Aplysia_californica_annotation_release_102"
-)
-
-PURPOSES=(
-  "the publisher's checksum list for the assembly directory, from which the md5 column is taken"
-  "the assembly: the lift-over target and the coordinate frame"
-  "the gene models: parsed by step 3, and the --gff guide for Liftoff"
-  "the protein set: BUSCO --proteins, InterProScan, eggNOG-mapper"
-  "the CDS sequences: the start/stop-codon and coding-length diagnostics"
-  "the flat attribute table: the gene and transcript names"
-  "the gap positions: whether a model overlaps a gap in the assembly"
-  "the GO annotations: the GO half of the gene-to-term map for test T6"
-  "the sequence-to-assembly mapping, and the file stating both accessions"
-  "NCBI's own counts of the annotation"
-  "the Release 102 annotation report"
-  "the release readme, which states the release strings"
-)
-
-# The assembly FASTA is the assembly; the rest are the Release 102
-# distribution, which carries that assembly.
-ANNOTATION_RELEASE=(
-  "AplCal3.0 assembly directory"
-  "${ASSEMBLY_NAME} assembly"
-  "${RELEASE}" "${RELEASE}" "${RELEASE}" "${RELEASE}" "${RELEASE}"
-  "${RELEASE}" "${RELEASE}" "${RELEASE}" "${RELEASE}" "${RELEASE}"
+#
+# Each row is: file | accession | release | url | purpose
+#
+# The accession is what the file belongs to. For the genome and its
+# annotation that is a RefSeq assembly accession; for the transcriptomes
+# it is the GenBank TSA project the Orvis 2022 assembly was deposited
+# under, which is the same accession the pre-registration names for the
+# transcriptome.
+ROWS=(
+  "md5checksums.txt|${ASSEMBLY}|AplCal3.0 assembly directory|${BASE}/md5checksums.txt|the publisher's checksum list for the assembly directory, from which the md5 column is taken"
+  "${ASSEMBLY}_${ASSEMBLY_NAME}_genomic.fna.gz|${ASSEMBLY}|${ASSEMBLY_NAME} assembly|${BASE}/${ASSEMBLY}_${ASSEMBLY_NAME}_genomic.fna.gz|the assembly: the lift-over target and the coordinate frame"
+  "${ASSEMBLY}_${ASSEMBLY_NAME}_genomic.gff.gz|${ASSEMBLY}|${RELEASE}|${BASE}/${ASSEMBLY}_${ASSEMBLY_NAME}_genomic.gff.gz|the gene models: parsed by step 3, and the --gff guide for Liftoff"
+  "${ASSEMBLY}_${ASSEMBLY_NAME}_protein.faa.gz|${ASSEMBLY}|${RELEASE}|${BASE}/${ASSEMBLY}_${ASSEMBLY_NAME}_protein.faa.gz|the protein set: BUSCO --proteins, InterProScan, eggNOG-mapper"
+  "${ASSEMBLY}_${ASSEMBLY_NAME}_cds_from_genomic.fna.gz|${ASSEMBLY}|${RELEASE}|${BASE}/${ASSEMBLY}_${ASSEMBLY_NAME}_cds_from_genomic.fna.gz|the CDS sequences: the start/stop-codon and coding-length diagnostics"
+  "${ASSEMBLY}_${ASSEMBLY_NAME}_feature_table.txt.gz|${ASSEMBLY}|${RELEASE}|${BASE}/${ASSEMBLY}_${ASSEMBLY_NAME}_feature_table.txt.gz|the flat attribute table: the gene and transcript names"
+  "${ASSEMBLY}_${ASSEMBLY_NAME}_genomic_gaps.txt.gz|${ASSEMBLY}|${RELEASE}|${BASE}/${ASSEMBLY}_${ASSEMBLY_NAME}_genomic_gaps.txt.gz|the gap positions: whether a model overlaps a gap in the assembly"
+  "${ASSEMBLY}_${ASSEMBLY_NAME}_gene_ontology.gaf.gz|${ASSEMBLY}|${RELEASE}|${BASE}/${ASSEMBLY}_${ASSEMBLY_NAME}_gene_ontology.gaf.gz|the GO annotations: the GO half of the gene-to-term map for test T6"
+  "${ASSEMBLY}_${ASSEMBLY_NAME}_assembly_report.txt|${ASSEMBLY}|${RELEASE}|${BASE}/${ASSEMBLY}_${ASSEMBLY_NAME}_assembly_report.txt|the sequence-to-assembly mapping, and the file stating both accessions"
+  "${ASSEMBLY}_${ASSEMBLY_NAME}_feature_count.txt.gz|${ASSEMBLY}|${RELEASE}|${BASE}/${ASSEMBLY}_${ASSEMBLY_NAME}_feature_count.txt.gz|NCBI's own counts of the annotation"
+  "Aplysia_californica_AR102_annotation_report.xml|${ASSEMBLY}|${RELEASE}|${BASE}/Aplysia_californica_AR102_annotation_report.xml|the Release 102 annotation report"
+  "README_Aplysia_californica_annotation_release_102|${ASSEMBLY}|${RELEASE}|${BASE}/README_Aplysia_californica_annotation_release_102|the release readme, which states the release strings"
+  "new_unigenes.fasta|${TSA}|${TRANSCRIPTOME}|${TOOLS_BASE}/new_unigenes.fasta|the merged-unigene nucleotide FASTA: the lift-off source for step 3"
+  "annotation_1A-2C.fasta|${TSA}|${TRANSCRIPTOME}|${TOOLS_BASE}/annotation_1A-2C.fasta|the predicted protein set for the CNS transcriptome: the DIAMOND and Liftoff input"
+  "current.annotation.fasta|${TSA}|${TRANSCRIPTOME}|${TOOLS_BASE}/current.annotation.fasta|the live current annotation: every tissue's proteins in one file, of which the CNS subset is identical to annotation_1A-2C.fasta"
+  "merged.unigenes.trinotate.longest_orf.json|${TSA}|${TRANSCRIPTOME}|${TOOLS_BASE}/merged.unigenes.trinotate.longest_orf.json|the Trinotate functional annotation of the merged unigenes: product, Pfam and GO"
 )
 
 if [ ! -f "${RAW}/md5checksums.txt" ]; then
@@ -102,13 +97,20 @@ fi
 
 echo "==> computing the checksums"
 {
-  printf 'file\tassembly\tannotation_release\turl\tbytes\tmd5\tmd5_source\tsha256\tpurpose\n'
-  INDEX=0
-  for FILE in "${FILES[@]}"; do
+  printf 'file\taccession\tannotation_release\turl\tbytes\tmd5\tmd5_source\tsha256\tpurpose\n'
+  for ROW in "${ROWS[@]}"; do
+    FILE="${ROW%%|*}"
+    REST="${ROW#*|}"
+    ACCESSION="${REST%%|*}"
+    REST="${REST#*|}"
+    ANNOTATION_RELEASE="${REST%%|*}"
+    REST="${REST#*|}"
+    URL="${REST%%|*}"
+    PURPOSE="${REST#*|}"
     TARGET="${RAW}/${FILE}"
     BYTES="$(stat -c%s "$TARGET")"
     SHA256="$(sha256sum "$TARGET" | awk '{print $1}')"
-    PUBLISHED="$(awk -v file="$FILE" '$2 ~ file"$" {print $1}' "${RAW}/md5checksums.txt")"
+    PUBLISHED="$(awk -v file="$FILE" '$2 ~ file"$" {print $1}' "${RAW}/md5checksums.txt" 2>/dev/null || true)"
     if [ -n "$PUBLISHED" ]; then
       ACTUAL_MD5="$(md5sum "$TARGET" | awk '{print $1}')"
       if [ "$ACTUAL_MD5" != "$PUBLISHED" ]; then
@@ -123,12 +125,10 @@ echo "==> computing the checksums"
       MD5="-"
       SOURCE="none published"
     fi
-    printf '%s\t%s\t%s\t%s/%s\t%s\t%s\t%s\t%s\t%s\n' \
-      "$FILE" "$ASSEMBLY" "${ANNOTATION_RELEASE[$INDEX]}" "$BASE" "$FILE" \
-      "$BYTES" "$MD5" "$SOURCE" "$SHA256" "${PURPOSES[$INDEX]}"
-    INDEX=$((INDEX + 1))
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+      "$FILE" "$ACCESSION" "$ANNOTATION_RELEASE" "$URL" "$BYTES" "$MD5" "$SOURCE" "$SHA256" "$PURPOSE"
   done
 } > "${OUT}.new"
 
 mv "${OUT}.new" "${OUT}"
-echo "==> wrote ${OUT} with $((${#FILES[@]})) files"
+echo "==> wrote ${OUT} with $((${#ROWS[@]})) files"

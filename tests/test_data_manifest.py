@@ -39,7 +39,7 @@ ANNOTATION_NOTE = os.path.join(REPO_ROOT, "docs", "P01-02-3-annotation-download.
 
 COLUMNS = [
     "file",
-    "assembly",
+    "accession",
     "annotation_release",
     "url",
     "bytes",
@@ -64,7 +64,21 @@ INPUTS = [
     "GCF_000002075.1_AplCal3.0_feature_count.txt.gz",
     "Aplysia_californica_AR102_annotation_report.xml",
     "README_Aplysia_californica_annotation_release_102",
+    "new_unigenes.fasta",
+    "annotation_1A-2C.fasta",
+    "current.annotation.fasta",
+    "merged.unigenes.trinotate.longest_orf.json",
 ]
+
+# The accessions a file may belong to: the RefSeq assembly for the genome
+# and its annotation, the GenBank TSA project for the transcriptomes.
+ACCESSIONS = ("GCF_000002075.1", "GJYY00000000")
+
+# The two publishers the inputs come from.
+PUBLISHERS = (
+    "https://ftp.ncbi.nlm.nih.gov/",
+    "http://aplysiatools.org/data/",
+)
 
 
 def read(path):
@@ -167,14 +181,17 @@ class ManifestTest(unittest.TestCase):
             self.assertGreater(int(row["bytes"]), 0, row["file"])
             self.assertTrue(row["purpose"].strip(), row["file"])
 
-    def test_every_row_names_the_assembly_and_a_release(self):
+    def test_every_row_names_an_accession_and_a_release(self):
         for row in manifest_rows():
-            self.assertEqual(row["assembly"], "GCF_000002075.1", row["file"])
+            self.assertIn(row["accession"], ACCESSIONS, row["file"])
             self.assertTrue(row["annotation_release"].strip(), row["file"])
 
-    def test_the_urls_point_at_the_assembly_directory(self):
+    def test_the_urls_point_at_a_publisher(self):
         for row in manifest_rows():
-            self.assertIn("GCF/000/002/075/GCF_000002075.1_AplCal3.0", row["url"], row["file"])
+            self.assertTrue(
+                row["url"].startswith(PUBLISHERS),
+                f"{row['file']} has an unexpected url: {row['url']}",
+            )
 
 
 class AgreementTest(unittest.TestCase):
