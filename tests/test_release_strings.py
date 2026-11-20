@@ -26,6 +26,7 @@ unseen.
 """
 
 import datetime
+import gzip
 import os
 import re
 import subprocess
@@ -42,6 +43,7 @@ COLUMNS = ["key", "value", "concept", "source_file", "source_line", "selector"]
 
 README = "README_Aplysia_californica_annotation_release_102"
 REPORT = "Aplysia_californica_AR102_annotation_report.xml"
+TSA_MASTER = "tsa.GJYY.mstr.gbff.gz"
 
 # The concepts whose two sources record a date, and whose values are
 # therefore expected to differ in format while describing one date.
@@ -88,6 +90,23 @@ def version_rows():
             continue
         rows.append(dict(zip(header, line.split("\t"))))
     return rows
+
+
+def source_lines(name):
+    """Return the lines of a source file, decompressing it if it is gzipped.
+
+    Args:
+        name: the name of the file under data/raw/.
+
+    Returns:
+        The lines, without their terminators.
+    """
+    path = os.path.join(RAW, name)
+    if name.endswith(".gz"):
+        with gzip.open(path, "rt", encoding="utf-8") as handle:
+            return handle.read().split("\n")
+    with open(path, encoding="utf-8") as handle:
+        return handle.read().split("\n")
 
 
 def manifest_rows():
@@ -162,7 +181,7 @@ def note_agreement_table():
         that only one source records.
     """
     text = read(NOTE)
-    start = text.index("## What the two sources agree on")
+    start = text.index("## What the two annotation sources agree on")
     table = {}
     for line in text[start:].splitlines():
         match = re.match(r"^\|\s*`([^`]+)`\s*\|\s*`([^`]*)`\s*\|\s*`([^`]*)`\s*\|\s*$", line)
@@ -227,9 +246,9 @@ class CaptureTest(unittest.TestCase):
         for row in version_rows():
             self.assertIn(row["source_file"], recorded, row["source_file"])
 
-    def test_the_sources_are_the_two_the_capture_names(self):
+    def test_the_sources_are_the_three_the_capture_names(self):
         used = {row["source_file"] for row in version_rows()}
-        self.assertEqual(used, {README, REPORT})
+        self.assertEqual(used, {README, REPORT, TSA_MASTER})
 
 
 class AgreementTest(unittest.TestCase):
@@ -308,8 +327,13 @@ class NoteTest(unittest.TestCase):
             self.assertIn(row["value"], note, row["key"])
 
     def test_the_agreement_table_lists_exactly_the_shared_concepts(self):
+        # The table is about the two files that describe the genome
+        # annotation. The TSA master record is a third source, from a
+        # different deposition, and has no partner to agree with.
         by_concept = {}
         for row in version_rows():
+            if row["source_file"] not in (README, REPORT):
+                continue
             by_concept.setdefault(row["concept"], []).append(row)
         shared = {
             concept
@@ -322,6 +346,8 @@ class NoteTest(unittest.TestCase):
     def test_the_agreement_table_carries_the_right_values(self):
         by_concept = {}
         for row in version_rows():
+            if row["source_file"] not in (README, REPORT):
+                continue
             by_concept.setdefault(row["concept"], []).append(row)
         table = note_agreement_table()
         for concept, (readme_value, report_value) in table.items():
@@ -354,18 +380,14 @@ class AgainstSourcesTest(unittest.TestCase):
         import capture_versions
 
         for row in version_rows():
-            path = os.path.join(RAW, row["source_file"])
-            with open(path, encoding="utf-8") as handle:
-                lines = handle.read().split("\n")
+            lines = source_lines(row["source_file"])
             line = lines[int(row["source_line"]) - 1]
-            value = capture_versions.extract(line, row["selector"])
+            value = capture_versions.extract(line, row["selector"], "\n".join(lines))
             self.assertEqual(value, row["value"], f"{row['key']} at {row['source_file']}")
 
     def test_the_generated_lines_match_the_sources(self):
         for row in version_rows():
-            path = os.path.join(RAW, row["source_file"])
-            with open(path, encoding="utf-8") as handle:
-                lines = handle.read().split("\n")
+            lines = source_lines(row["source_file"])
             source = lines[int(row["source_line"]) - 1]
             printed = f"{row['source_line']:>6}: {source}"
             self.assertIn(printed, read(VERBATIM), row["key"])

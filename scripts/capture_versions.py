@@ -27,8 +27,10 @@ programme has already recorded.
 """
 
 import argparse
+import gzip
 import hashlib
 import os
+import re
 import sys
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -45,6 +47,7 @@ END_MARKER = "<!-- END VERBATIM -->"
 
 README = "README_Aplysia_californica_annotation_release_102"
 REPORT = "Aplysia_californica_AR102_annotation_report.xml"
+TSA_MASTER = "tsa.GJYY.mstr.gbff.gz"
 
 COLUMNS = ["key", "value", "concept", "source_file", "source_line", "selector"]
 
@@ -233,7 +236,34 @@ CAPTURES = [
         "xml-element",
     ),
     Capture("annotation.ftp_site.report", "annotation.ftp_site", REPORT, 40, "xml-element"),
+    # --- the TSA master record: the Orvis 2022 deposition --------------------
+    Capture("tsa.project_version_accession.report", "tsa.project_version_accession", TSA_MASTER, 1, "locus:1"),
+    Capture("tsa.sequence_count.report", "tsa.sequence_count", TSA_MASTER, 1, "locus:2"),
+    Capture("tsa.division.report", "tsa.division", TSA_MASTER, 1, "locus:3"),
+    Capture("tsa.molecule.report", "tsa.molecule", TSA_MASTER, 1, "locus:4"),
+    Capture("tsa.topology.report", "tsa.topology", TSA_MASTER, 1, "locus:5"),
+    Capture("tsa.locus_date.report", "tsa.locus_date", TSA_MASTER, 1, "locus:7"),
+    Capture("tsa.accession.report", "tsa.accession", TSA_MASTER, 4, "label-value:ACCESSION"),
+    Capture("tsa.version.report", "tsa.version", TSA_MASTER, 5, "label-token:VERSION"),
+    Capture("tsa.bioproject.report", "tsa.bioproject", TSA_MASTER, 6, "regex:BioProject: (PRJNA\\d+)"),
+    Capture("tsa.biosample.report", "tsa.biosample", TSA_MASTER, 7, "regex:BioSample: (SAMN\\d+)"),
+    Capture("tsa.sra.report", "tsa.sra", TSA_MASTER, 8, "regex:Sequence Read Archive: (SRR\\d+)"),
+    Capture("tsa.organism.report", "tsa.organism", TSA_MASTER, 11, "label-value:ORGANISM"),
+    Capture("tsa.journal.report", "tsa.journal", TSA_MASTER, 21, "label-value:JOURNAL"),
+    Capture("tsa.submitted_date.report", "tsa.submitted_date", TSA_MASTER, 27, "regex:Submitted \\((\\d{2}-[A-Z]{3}-\\d{4})\\)"),
+    Capture("tsa.reads.report", "tsa.reads", TSA_MASTER, 34, "regex:([\\d.]+ billion Illumina HiSeq reads)"),
+    Capture("tsa.assembly_method.report", "tsa.assembly_method", TSA_MASTER, 46, "assembly-data:Assembly Method"),
+    Capture("tsa.assembly_name.report", "tsa.assembly_name", TSA_MASTER, 47, "assembly-data:Assembly Name"),
+    Capture("tsa.sequencing_technology.report", "tsa.sequencing_technology", TSA_MASTER, 48, "assembly-data:Sequencing Technology"),
+    Capture("tsa.organism_qualifier.report", "tsa.organism", TSA_MASTER, 52, "qualifier:organism"),
+    Capture("tsa.mol_type.report", "tsa.mol_type", TSA_MASTER, 53, "qualifier:mol_type"),
+    Capture("tsa.isolate.report", "tsa.isolate", TSA_MASTER, 54, "qualifier:isolate"),
+    Capture("tsa.taxon.report", "tsa.taxon", TSA_MASTER, 55, "regex:taxon:(\\d+)"),
+    Capture("tsa.sex.report", "tsa.sex", TSA_MASTER, 56, "qualifier:sex"),
+    Capture("tsa.tissue_type.report", "tsa.tissue_type", TSA_MASTER, 57, "qualifier:tissue_type"),
+    Capture("tsa.sequence_range.report", "tsa.sequence_range", TSA_MASTER, 58, "label-value:TSA"),
 ]
+
 
 
 def sha256_of(path):
@@ -272,14 +302,19 @@ def read_manifest(path):
     return recorded
 
 
-def extract(line, selector):
-    """Take the value out of one source line.
+def extract(line, selector, text=None):
+    """Take the value out of one source line, or out of the whole record.
 
     Args:
         line: the source line, without its terminator.
         selector: how to take the value. "tab:N" is the Nth tab-separated
             field, 1-indexed. "xml-element" is the text between the tags.
-            "xml-attribute:NAME" is the value of that attribute.
+            "xml-attribute:NAME" is the value of that attribute. "locus:N"
+            is the Nth field of the LOCUS line. "label-value:NAME" and
+            "label-token:NAME" read a flatfile label. "qualifier:NAME"
+            reads a feature qualifier. "assembly-data:KEY" reads the
+            Assembly-Data block. "regex:PATTERN" takes the first match.
+        text: the whole record, for the selectors that read across it.
 
     Returns:
         The value, as text.
@@ -287,6 +322,8 @@ def extract(line, selector):
     Raises:
         ValueError: If the line does not yield a value.
     """
+    if text is None:
+        text = line
     if selector.startswith("tab:"):
         fields = line.split("\t")
         index = int(selector.split(":", 1)[1])
@@ -299,6 +336,52 @@ def extract(line, selector):
         if start < 0 or end < 0 or end < start:
             raise ValueError(f"line is not an element with a value: {line!r}")
         return line[start + 1 : end]
+    if selector.startswith("locus:"):
+        index = int(selector.split(":", 1)[1])
+        for candidate in text.split("\n"):
+            if candidate.strip().split(" ")[0] == "LOCUS":
+                # The LOCUS keyword is not a field of the record; the
+                # fields are what follows it.
+                fields = candidate.split()[1:]
+                if index > len(fields):
+                    raise ValueError(f"the LOCUS line has {len(fields)} fields, wanted field {index}")
+                return fields[index - 1]
+        raise ValueError("the line holds no LOCUS record")
+    if selector.startswith("label-value:") or selector.startswith("label-token:"):
+        name = selector.split(":", 1)[1]
+        token = selector.startswith("label-token:")
+        for candidate in text.split("\n"):
+            stripped = candidate.strip()
+            if stripped.startswith(name + " ") or stripped == name:
+                rest = stripped[len(name) :].strip()
+                if not rest:
+                    raise ValueError(f"the {name} label carries no value")
+                return rest.split()[0] if token else rest
+        raise ValueError(f"there is no {name} label in the record")
+    if selector.startswith("qualifier:"):
+        name = selector.split(":", 1)[1]
+        marker = f'/{name}="'
+        start = text.find(marker)
+        if start < 0:
+            raise ValueError(f"the record has no /{name} qualifier")
+        start += len(marker)
+        end = text.find('"', start)
+        if end < 0:
+            raise ValueError(f"the /{name} qualifier is not closed")
+        return text[start:end]
+    if selector.startswith("assembly-data:"):
+        key = selector.split(":", 1)[1]
+        pattern = re.compile(r"^\s*" + re.escape(key) + r"\s+::\s*(.*)$", re.MULTILINE)
+        match = pattern.search(text)
+        if not match:
+            raise ValueError(f"the record has no {key} in its Assembly-Data block")
+        return match.group(1).strip()
+    if selector.startswith("regex:"):
+        pattern = selector.split(":", 1)[1]
+        match = re.search(pattern, text)
+        if not match:
+            raise ValueError(f"the pattern {pattern!r} does not match the record")
+        return match.group(1) if match.groups() else match.group(0)
     if selector.startswith("xml-attribute:"):
         name = selector.split(":", 1)[1]
         marker = f'{name}="'
@@ -330,6 +413,9 @@ def read_source(name):
         raise FileNotFoundError(
             f"{path} is not here. Run scripts/fetch_assembly.sh and scripts/fetch_annotation.sh first."
         )
+    if name.endswith(".gz"):
+        with gzip.open(path, "rt", encoding="utf-8") as handle:
+            return handle.read().split("\n")
     with open(path, encoding="utf-8") as handle:
         return handle.read().split("\n")
 
@@ -357,7 +443,7 @@ def capture(captures):
                 f"{entry.key}: {entry.source_file} has {len(source)} lines, wanted line {entry.line}"
             )
         line = source[entry.line - 1]
-        value = extract(line, entry.selector)
+        value = extract(line, entry.selector, "\n".join(source))
         if not value:
             raise ValueError(f"{entry.key}: {entry.source_file} line {entry.line} yields an empty value")
         rows.append(

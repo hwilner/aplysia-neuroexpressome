@@ -24,11 +24,13 @@ is continuous integration by design. The ones that only need the
 committed record always run.
 """
 
+import gzip
 import hashlib
 import json
 import os
 import re
 import subprocess
+import sys
 import unittest
 
 REPO_ROOT = os.path.join(os.path.dirname(__file__), os.pardir)
@@ -41,8 +43,13 @@ NUCLEOTIDE = "new_unigenes.fasta"
 PROTEINS = "annotation_1A-2C.fasta"
 CURRENT = "current.annotation.fasta"
 TRINOTATE = "merged.unigenes.trinotate.longest_orf.json"
+TSA_FASTA = "tsa.GJYY.1.fsa_nt.gz"
+TSA_GBFF = "tsa.GJYY.1.gbff.gz"
+TSA_MASTER = "tsa.GJYY.mstr.gbff.gz"
+TSA_STATS = "stats.tsa.GJYY"
 
 TRANSCRIPTOMES = [NUCLEOTIDE, PROTEINS, CURRENT, TRINOTATE]
+TSA_FILES = [TSA_FASTA, TSA_GBFF, TSA_MASTER, TSA_STATS]
 
 # The counts established on 2026-11-18 by reading the files.
 COUNTS = {
@@ -50,6 +57,21 @@ COUNTS = {
     PROTEINS: 39486,
     CURRENT: 196953,
     TRINOTATE: 24339,
+}
+
+# The publisher's own aggregates for the TSA project, from stats.tsa.GJYY.
+TSA_AGGREGATES = {
+    "sequences": 68308,
+    "basepairs": 124437778,
+    "longest": 42564,
+    "shortest": 303,
+}
+
+# How many of each AplysiaTools identifier set is in the TSA, found through
+# the original names the GenBank flatfile carries.
+IN_TSA = {
+    PROTEINS: 38129,
+    NUCLEOTIDE: 12551,
 }
 
 # The paper's final count: 39,486 unigenes with a minimum ORF length of
@@ -84,6 +106,22 @@ def manifest_rows():
     return [dict(zip(header, line.split("\t"))) for line in lines[1:] if line.strip()]
 
 
+def tsa_names():
+    """Return the accession-to-original-name mapping of the TSA flatfile.
+
+    Returns:
+        The mapping, as a dictionary.
+    """
+    sys_path = os.path.join(REPO_ROOT, "scripts")
+    if sys_path not in sys.path:
+        sys.path.insert(0, sys.path)
+    import extract_tsa_names
+
+    return dict(
+        extract_tsa_names.extract(os.path.join(RAW, TSA_GBFF))
+    )
+
+
 def fasta_headers(path):
     """Return the identifiers of a FASTA file.
 
@@ -106,8 +144,20 @@ class RecordTest(unittest.TestCase):
 
     def test_the_manifest_lists_the_transcriptomes(self):
         listed = {row["file"] for row in manifest_rows()}
-        for name in TRANSCRIPTOMES:
+        for name in TRANSCRIPTOMES + TSA_FILES:
             self.assertIn(name, listed, f"{name} is not in the manifest")
+
+    def test_the_tsa_files_belong_to_the_transcriptome_project(self):
+        for row in manifest_rows():
+            if row["file"] in TSA_FILES:
+                self.assertEqual(row["accession"], "GJYY00000000", row["file"])
+
+    def test_the_tsa_fasta_purpose_records_the_aggregate_check(self):
+        for row in manifest_rows():
+            if row["file"] == TSA_FASTA:
+                self.assertIn("aggregates", row["purpose"])
+                return
+        self.fail("the TSA FASTA is not in the manifest")
 
     def test_the_transcriptomes_belong_to_the_transcriptome_project(self):
         for row in manifest_rows():
@@ -127,9 +177,15 @@ class RecordTest(unittest.TestCase):
 
     def test_the_fetch_script_covers_exactly_them(self):
         script = read(FETCH)
-        for name in TRANSCRIPTOMES:
+        for name in TRANSCRIPTOMES + TSA_FILES:
             self.assertIn(name, script, f"{name} is not fetched by the script")
         self.assertIn("aplysiatools.org/data", script)
+        self.assertIn("genbank/tsa", script)
+
+    def test_the_fetch_script_checks_the_published_aggregates(self):
+        script = read(FETCH)
+        self.assertIn("verify_tsa_aggregates", script)
+        self.assertIn("stats.tsa.GJYY", script)
 
     def test_the_fetch_script_verifies_against_the_manifest(self):
         script = read(FETCH)
@@ -210,6 +266,43 @@ class AgainstDiskTest(unittest.TestCase):
             annotated = {record["id"] for record in json.load(handle)}
         nucleotides = set(fasta_headers(os.path.join(RAW, NUCLEOTIDE)))
         self.assertTrue(annotated.issubset(nucleotides))
+
+    def test_the_tsa_fasta_matches_the_published_aggregates(self):
+        path = os.path.join(RAW, TSA_FASTA)
+        count = 0
+        bases = 0
+        lengths = []
+        with gzip.open(path, "rt", encoding="utf-8") as handle:
+            length = 0
+            for line in handle:
+                if line.startswith(">"):
+                    if count:
+                        lengths.append(length)
+                    count += 1
+                    length = 0
+                    continue
+                length += len(line.strip())
+            lengths.append(length)
+            bases = sum(lengths)
+        self.assertEqual(count, TSA_AGGREGATES["sequences"])
+        self.assertEqual(bases, TSA_AGGREGATES["basepairs"])
+        self.assertEqual(max(lengths), TSA_AGGREGATES["longest"])
+        self.assertEqual(min(lengths), TSA_AGGREGATES["shortest"])
+
+    def test_the_tsa_flatfile_carries_no_gene_models(self):
+        kinds = set()
+        with gzip.open(os.path.join(RAW, TSA_GBFF), "rt", encoding="utf-8") as handle:
+            for line in handle:
+                if re.match(r"^     [a-zA-Z]", line):
+                    kinds.add(line.split()[0])
+        self.assertEqual(kinds, {"source"})
+
+    def test_the_tsa_names_bridge_the_two_namespaces(self):
+        mapping = tsa_names()
+        self.assertEqual(len(mapping), TSA_AGGREGATES["sequences"])
+        for name in IN_TSA:
+            headers = set(fasta_headers(os.path.join(RAW, name)))
+            self.assertEqual(len(headers & set(mapping.values())), IN_TSA[name], name)
 
 
 if __name__ == "__main__":

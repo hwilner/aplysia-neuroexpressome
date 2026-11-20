@@ -42,6 +42,7 @@ BASE="https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/002/075/${ASSEMBLY}_${ASS
 TSA="GJYY00000000"
 TRANSCRIPTOME="Orvis et al. 2022 CNS transcriptome"
 TOOLS_BASE="http://aplysiatools.org/data"
+TSA_BASE="https://ftp.ncbi.nlm.nih.gov/genbank/tsa/G"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(dirname "$HERE")"
@@ -74,6 +75,10 @@ ROWS=(
   "annotation_1A-2C.fasta|${TSA}|${TRANSCRIPTOME}|${TOOLS_BASE}/annotation_1A-2C.fasta|the predicted protein set for the CNS transcriptome: the DIAMOND and Liftoff input"
   "current.annotation.fasta|${TSA}|${TRANSCRIPTOME}|${TOOLS_BASE}/current.annotation.fasta|the live current annotation: every tissue's proteins in one file, of which the CNS subset is identical to annotation_1A-2C.fasta"
   "merged.unigenes.trinotate.longest_orf.json|${TSA}|${TRANSCRIPTOME}|${TOOLS_BASE}/merged.unigenes.trinotate.longest_orf.json|the Trinotate functional annotation of the merged unigenes: product, Pfam and GO"
+  "tsa.GJYY.1.fsa_nt.gz|${TSA}|${TRANSCRIPTOME}|${TSA_BASE}/tsa.GJYY.1.fsa_nt.gz|the Orvis 2022 CNS transcriptome: the lift-off source, whose record count, base total and length extremes all match the publisher's published aggregates in stats.tsa.GJYY"
+  "tsa.GJYY.1.gbff.gz|${TSA}|${TRANSCRIPTOME}|${TSA_BASE}/tsa.GJYY.1.gbff.gz|the Orvis 2022 CNS transcriptome in GenBank flatfile format: the sequences carry no gene models, and their DEFINITION lines carry the original Trinity and asmbl names, which are the only bridge between the GenBank and AplysiaTools identifiers"
+  "tsa.GJYY.mstr.gbff.gz|${TSA}|${TRANSCRIPTOME}|${TSA_BASE}/tsa.GJYY.mstr.gbff.gz|the TSA master record: the deposition's own accession, version, BioProject, BioSample, SRA, dates and assembly method"
+  "stats.tsa.GJYY|${TSA}|${TRANSCRIPTOME}|${TSA_BASE}/stats.tsa.GJYY|the publisher's own counts for the TSA project: sequences, bases, longest and shortest"
 )
 
 if [ ! -f "${RAW}/md5checksums.txt" ]; then
@@ -110,7 +115,7 @@ echo "==> computing the checksums"
     TARGET="${RAW}/${FILE}"
     BYTES="$(stat -c%s "$TARGET")"
     SHA256="$(sha256sum "$TARGET" | awk '{print $1}')"
-    PUBLISHED="$(awk -v file="$FILE" '$2 ~ file"$" {print $1}' "${RAW}/md5checksums.txt" 2>/dev/null || true)"
+    PUBLISHED="$(awk -v file="$FILE" '{n=$2; sub(/^.*\//,"",n); if (n==file) print $1}' "${RAW}/md5checksums.txt" 2>/dev/null || true)"
     if [ -n "$PUBLISHED" ]; then
       ACTUAL_MD5="$(md5sum "$TARGET" | awk '{print $1}')"
       if [ "$ACTUAL_MD5" != "$PUBLISHED" ]; then

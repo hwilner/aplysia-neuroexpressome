@@ -26,11 +26,11 @@ so nothing in it can drift from the source by a capital letter or a hyphen.
 
 | | |
 |---|---|
-| Record | `data/versions.tsv` — 38 strings, 26 concepts |
+| Record | `data/versions.tsv` — 63 strings, 41 concepts |
 | Source lines | `data/versions-verbatim.txt` — the lines, with their numbers |
 | Generator | `scripts/capture_versions.py` |
 | Tests | `tests/test_release_strings.py` |
-| Sources | `README_Aplysia_californica_annotation_release_102`, `Aplysia_californica_AR102_annotation_report.xml` |
+| Sources | `README_Aplysia_californica_annotation_release_102`, `Aplysia_californica_AR102_annotation_report.xml`, `tsa.GJYY.mstr.gbff.gz` |
 
 The generator refuses to run unless each source file is listed in
 `data/manifest.tsv` **and** its SHA-256 still matches. A capture cannot
@@ -88,12 +88,42 @@ them is not.
     36:   <IdLoadDate>Aug 31 2020</IdLoadDate>
     40:   <FtpSite>ftp://ftp.ncbi.nlm.nih.gov/genomes/all/annotation_releases/6500/102</FtpSite>
 ```
+
+### `tsa.GJYY.mstr.gbff.gz`
+
+```
+     1: LOCUS       GJYY01000000           68308 rc    RNA     linear   TSA 10-JUN-2022
+     4: ACCESSION   GJYY00000000
+     5: VERSION     GJYY00000000.1  GI:2251024044
+     6: DBLINK      BioProject: PRJNA792581
+     7:             BioSample: SAMN24439638
+     8:             Sequence Read Archive: SRR17649340
+    11:   ORGANISM  Aplysia californica
+    21:   JOURNAL   Unpublished
+    27:   JOURNAL   Submitted (15-MAY-2022) Institute for Genome Sciences, University
+    34:             For the CNS, 2.97 billion Illumina HiSeq reads were first trimmed
+    46:             Assembly Method       :: Trinity 2.9.1; StringTie 2.1.1; PASA 2.4.1
+    47:             Assembly Name         :: Aplysia_CNS
+    48:             Sequencing Technology :: Illumina HiSeq
+    52:                      /organism="Aplysia californica"
+    53:                      /mol_type="transcribed RNA"
+    54:                      /isolate="field caught, aquaculture reared"
+    55:                      /db_xref="taxon:6500"
+    56:                      /sex="hermaphrodite"
+    57:                      /tissue_type="CNS"
+    58: TSA         GJYY01000001-GJYY01068308
+```
 <!-- END VERBATIM -->
 
-## What the two sources agree on
+## What the two annotation sources agree on
 
-Twelve concepts are recorded by both files. Nine are byte-identical; three are
-the same date in two formats.
+This section is about the two files that describe the *genome annotation*: the
+release readme and the AR102 report. Twelve concepts are recorded by both.
+Nine are byte-identical; three are the same date in two formats.
+
+The third source, the TSA master record, is a different deposition and is
+not compared with them. It was added in P01-03.2 and its strings are in the
+same record; see `P01-03-2-genbank-tsa-transcriptome.md`.
 
 | Concept | Readme | Report |
 |---|---|---|
@@ -115,6 +145,11 @@ different audiences — a readme for a human and an XML report for a program.
 That they agree on all twelve is a check, not a hope: the tests compare them
 concept by concept, and the three dates are compared after being parsed, so a
 date that drifted in one file would fail.
+
+The TSA master record is the third source, and it is the only one with no
+partner. Nothing else in the record describes the Orvis 2022 transcriptome's
+deposition, so there is nothing to compare it against — which is why its
+twenty-five strings are read as a statement rather than as a cross-check.
 
 ## Three things worth knowing before citing this
 

@@ -37,3 +37,28 @@ annotation.evidence_freeze_date.report	Aug 18 2020	annotation.evidence_freeze_da
 annotation.evidence_freeze_date_id.report	20200818	annotation.evidence_freeze_date_id	Aplysia_californica_AR102_annotation_report.xml	35	xml-element
 annotation.id_load_date.report	Aug 31 2020	annotation.release_date	Aplysia_californica_AR102_annotation_report.xml	36	xml-element
 annotation.ftp_site.report	ftp://ftp.ncbi.nlm.nih.gov/genomes/all/annotation_releases/6500/102	annotation.ftp_site	Aplysia_californica_AR102_annotation_report.xml	40	xml-element
+tsa.project_version_accession.report	GJYY01000000	tsa.project_version_accession	tsa.GJYY.mstr.gbff.gz	1	locus:1
+tsa.sequence_count.report	68308	tsa.sequence_count	tsa.GJYY.mstr.gbff.gz	1	locus:2
+tsa.division.report	rc	tsa.division	tsa.GJYY.mstr.gbff.gz	1	locus:3
+tsa.molecule.report	RNA	tsa.molecule	tsa.GJYY.mstr.gbff.gz	1	locus:4
+tsa.topology.report	linear	tsa.topology	tsa.GJYY.mstr.gbff.gz	1	locus:5
+tsa.locus_date.report	10-JUN-2022	tsa.locus_date	tsa.GJYY.mstr.gbff.gz	1	locus:7
+tsa.accession.report	GJYY00000000	tsa.accession	tsa.GJYY.mstr.gbff.gz	4	label-value:ACCESSION
+tsa.version.report	GJYY00000000.1	tsa.version	tsa.GJYY.mstr.gbff.gz	5	label-token:VERSION
+tsa.bioproject.report	PRJNA792581	tsa.bioproject	tsa.GJYY.mstr.gbff.gz	6	regex:BioProject: (PRJNA\d+)
+tsa.biosample.report	SAMN24439638	tsa.biosample	tsa.GJYY.mstr.gbff.gz	7	regex:BioSample: (SAMN\d+)
+tsa.sra.report	SRR17649340	tsa.sra	tsa.GJYY.mstr.gbff.gz	8	regex:Sequence Read Archive: (SRR\d+)
+tsa.organism.report	Aplysia californica	tsa.organism	tsa.GJYY.mstr.gbff.gz	11	label-value:ORGANISM
+tsa.journal.report	Unpublished	tsa.journal	tsa.GJYY.mstr.gbff.gz	21	label-value:JOURNAL
+tsa.submitted_date.report	15-MAY-2022	tsa.submitted_date	tsa.GJYY.mstr.gbff.gz	27	regex:Submitted \((\d{2}-[A-Z]{3}-\d{4})\)
+tsa.reads.report	2.97 billion Illumina HiSeq reads	tsa.reads	tsa.GJYY.mstr.gbff.gz	34	regex:([\d.]+ billion Illumina HiSeq reads)
+tsa.assembly_method.report	Trinity 2.9.1; StringTie 2.1.1; PASA 2.4.1	tsa.assembly_method	tsa.GJYY.mstr.gbff.gz	46	assembly-data:Assembly Method
+tsa.assembly_name.report	Aplysia_CNS	tsa.assembly_name	tsa.GJYY.mstr.gbff.gz	47	assembly-data:Assembly Name
+tsa.sequencing_technology.report	Illumina HiSeq	tsa.sequencing_technology	tsa.GJYY.mstr.gbff.gz	48	assembly-data:Sequencing Technology
+tsa.organism_qualifier.report	Aplysia californica	tsa.organism	tsa.GJYY.mstr.gbff.gz	52	qualifier:organism
+tsa.mol_type.report	transcribed RNA	tsa.mol_type	tsa.GJYY.mstr.gbff.gz	53	qualifier:mol_type
+tsa.isolate.report	field caught, aquaculture reared	tsa.isolate	tsa.GJYY.mstr.gbff.gz	54	qualifier:isolate
+tsa.taxon.report	6500	tsa.taxon	tsa.GJYY.mstr.gbff.gz	55	regex:taxon:(\d+)
+tsa.sex.report	hermaphrodite	tsa.sex	tsa.GJYY.mstr.gbff.gz	56	qualifier:sex
+tsa.tissue_type.report	CNS	tsa.tissue_type	tsa.GJYY.mstr.gbff.gz	57	qualifier:tissue_type
+tsa.sequence_range.report	GJYY01000001-GJYY01068308	tsa.sequence_range	tsa.GJYY.mstr.gbff.gz	58	label-value:TSA

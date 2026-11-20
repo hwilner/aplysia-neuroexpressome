@@ -38,3 +38,25 @@
     35:   <FreezeDateId>20200818</FreezeDateId>
     36:   <IdLoadDate>Aug 31 2020</IdLoadDate>
     40:   <FtpSite>ftp://ftp.ncbi.nlm.nih.gov/genomes/all/annotation_releases/6500/102</FtpSite>
+=== tsa.GJYY.mstr.gbff.gz
+
+     1: LOCUS       GJYY01000000           68308 rc    RNA     linear   TSA 10-JUN-2022
+     4: ACCESSION   GJYY00000000
+     5: VERSION     GJYY00000000.1  GI:2251024044
+     6: DBLINK      BioProject: PRJNA792581
+     7:             BioSample: SAMN24439638
+     8:             Sequence Read Archive: SRR17649340
+    11:   ORGANISM  Aplysia californica
+    21:   JOURNAL   Unpublished
+    27:   JOURNAL   Submitted (15-MAY-2022) Institute for Genome Sciences, University
+    34:             For the CNS, 2.97 billion Illumina HiSeq reads were first trimmed
+    46:             Assembly Method       :: Trinity 2.9.1; StringTie 2.1.1; PASA 2.4.1
+    47:             Assembly Name         :: Aplysia_CNS
+    48:             Sequencing Technology :: Illumina HiSeq
+    52:                      /organism="Aplysia californica"
+    53:                      /mol_type="transcribed RNA"
+    54:                      /isolate="field caught, aquaculture reared"
+    55:                      /db_xref="taxon:6500"
+    56:                      /sex="hermaphrodite"
+    57:                      /tissue_type="CNS"
+    58: TSA         GJYY01000001-GJYY01068308

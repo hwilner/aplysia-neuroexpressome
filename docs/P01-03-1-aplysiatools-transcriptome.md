@@ -205,3 +205,29 @@ Adding these four files changed the manifest's `assembly` column to
 `GJYY00000000` and not to an assembly at all. A column that means one thing
 for the genome files and another for the transcriptome files is a trap, and
 the manifest is the record every later step reads.
+
+## Addendum — P01-03.2, 2026-11-20
+
+P01-03.2 fetched the third copy of this transcriptome, from GenBank TSA
+`GJYY00000000`, and it changes which of the two AplysiaTools files is the
+outlier.
+
+The GenBank flatfile carries the original assembly names in its DEFINITION
+lines, which is the only bridge between the two identifier namespaces. With
+it, the overlap is:
+
+| AplysiaTools file | Its identifiers also in the TSA |
+|---|---|
+| predicted protein set (39,486) | **38,129** — 96.5% |
+| `new_unigenes.fasta` (26,849) | **12,551** — 46.7% |
+
+So the protein set is very nearly the TSA's content, filtered down to the
+paper's 39,486 — and **all 13,314** of its `asmbl_` identifiers are in the
+TSA. The nucleotide file is the strange one: barely half of it is in the TSA
+at all.
+
+What this note recorded above still stands. The nucleotide file and the
+protein set are not the same sequence set, and only 8,089 identifiers are
+shared between them. But the third copy shows that of the two, it is the
+**nucleotide file** that is the odd one out, not the protein set. P01-03.3
+to P01-03.5 now have that much to work with.
