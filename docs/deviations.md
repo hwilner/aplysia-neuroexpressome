@@ -8,10 +8,12 @@ stated in the manuscript methods. The pre-registration is not edited silently.
 | D001 | this repository | clusterProfiler dropped; limma and edgeR taken from one Bioconductor generation |
 | D002 | [#27](https://github.com/hwilner/aplysia-neuroexpressome/issues/27) | §2.2 as a whole: the base image, the InterProScan data release, MAFFT and trimAl, and the four-environment split |
 | D003 | [#28](https://github.com/hwilner/aplysia-neuroexpressome/issues/28) | §2.1 names the genome assembly as `GCF_000002075.2`, an accession that does not resolve |
+| D004 | [#30](https://github.com/hwilner/aplysia-neuroexpressome/issues/30) | §3.2 step 1 asks that two transcriptome sources be confirmed as the same underlying build; they are two different builds |
 
-**D002 and D003 are open.** `materials-and-methods.md` §2.2 still describes the
-pre-registered toolchain, and §2.1 still names an assembly accession that
-cannot be fetched. Neither is edited until the issue is decided.
+**D002, D003 and D004 are open.** `materials-and-methods.md` §2.2 still describes the
+pre-registered toolchain, §2.1 still names an assembly accession that
+cannot be fetched, and §3.2 step 1 still asks for a confirmation that cannot
+succeed. None of them is edited until the issue is decided.
 
 ## D001 - clusterProfiler dropped; enrichment is implemented in base R
 
@@ -144,3 +146,47 @@ been edited: one decision in issue #28 can settle all three.
 **Reversal:** nothing to reverse. The same sequence content is available
 under the GenBank accession, so citing that instead is a one-line change to
 the fetch script and a re-verification of the checksums.
+
+## D004 - the two transcriptome sources are two different builds
+
+**Date:** 2026-11-22. **Subtask:** P01-03.3. **Affects:** `materials-and-methods.md` §3.2 step 1.
+
+**Pre-registered:** "Obtain the merged-unigene FASTA and predicted protein set
+from AplysiaTools; obtain the Orvis 2022 assembly from GenBank. Confirm the
+two are the same underlying build by comparing sequence counts and a random
+sample of 50 sequences."
+
+**Changed:** the counts are compared, and the comparison is reported. The
+merged-unigene FASTA and the Orvis 2022 assembly are **not** confirmed to be
+the same build, because they are not: they are two different builds, published
+two years apart. The AplysiaTools file that does correspond to the Orvis 2022
+assembly is the **predicted protein set**, `annotation_1A-2C.fasta`. P01-03.4's
+50-sequence sample is run on that pair.
+
+**Why:** the AplysiaTools directory is not one build. It holds files from four
+years — `new_unigenes.fasta` 2020-11-11, `annotation_1A-2C.fasta` 2021-04-28,
+the six per-tissue files 2023-02-10, `current.annotation.fasta` 2025-07-15 —
+while the Orvis 2022 assembly was deposited on 2022-06-10.
+
+| | merged unigenes | CNS protein set | TSA |
+|---|---|---|---|
+| records | 26,849 | 39,486 | 68,308 |
+| `asmbl_` / `TRINITY_DN` | 24,099 / 2,750 | 13,314 / 26,172 | 23,003 / 45,305 |
+| identifiers also in the TSA | 12,551 (46.7%) | 38,129 (96.6%) | — |
+| a count the paper publishes | none | **39,486** | **68,308** |
+
+The paper's own four counts locate the builds exactly: 68,308 is the GenBank
+TSA, the full unigene set before the ORF filter; 39,486 is the AplysiaTools CNS
+protein set, that set after the filter. The `asmbl_` numeric ranges are the same
+in all three files (1–341,054 / 40–341,049 / 7–341,053), so these are two
+selections from one assembly taken at different times rather than two unrelated
+assemblies. Of the merged file's 24,099 `asmbl_` identifiers, 10,458 are in the
+TSA and 13,641 are not.
+
+**Consequence:** the pre-registered confirmation cannot be satisfied as
+written, and P01-03.4 must not be run against the merged-unigene FASTA, where a
+negative result would say something about the 2020 build and nothing about the
+data. The pre-specified comparison is still run and still reported; it reports
+a disagreement, and the note says which pair the disagreement is about. No
+result has been seen, because no analysis has been run. The decision on what
+§3.2 step 1 should say is issue #30's.
