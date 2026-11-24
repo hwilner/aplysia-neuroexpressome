@@ -4,6 +4,15 @@
 **Status:** complete.
 **Date:** 2026-11-22.
 
+> **Corrected 2026-11-24.** This note called AplysiaTools' 39,486-record
+> file the **CNS protein set**. It is nucleotide — every residue is A, C, G or
+> T — and so is every other transcriptome file AplysiaTools publishes, which
+> means there is no protein set there to obtain. The counts, the overlaps and
+> the derivation in this note are unaffected; only the word was wrong. The
+> consequence is deviation **D005** (issue #32). See
+> `docs/P01-03-4-sequence-sampling.md`.
+
+
 ## The question the pre-registration asks
 
 §3.2, step 1 of `materials-and-methods.md`:
@@ -32,10 +41,10 @@ from the downloaded files and written to `data/derived/transcriptome_counts.tsv`
 | Source | File | Date | Records | Distinct unigenes | What it counts |
 |---|---|---|---|---|---|
 | GenBank TSA `GJYY00000000` | `tsa.GJYY.1.fsa_nt.gz` | 2022-06-10 | **68,308** | 68,308 | the Orvis 2022 CNS transcriptome: one record per unigene |
-| AplysiaTools CNS protein set | `annotation_1A-2C.fasta` | 2021-04-28 | **39,486** | 39,486 | one predicted protein per unigene of the CNS transcriptome |
+| AplysiaTools CNS set | `annotation_1A-2C.fasta` | 2021-04-28 | **39,486** | 39,486 | one nucleotide sequence per unigene of the CNS transcriptome |
 | AplysiaTools merged unigenes | `new_unigenes.fasta` | 2020-11-11 | **26,849** | 26,849 | the merged-unigene nucleotide FASTA: one sequence per unigene |
 | AplysiaTools merged unigenes, annotated | `merged.unigenes.trinotate.longest_orf.json` | 2020-11-11 | 24,339 | 24,339 | the Trinotate annotation of those 26,849 |
-| AplysiaTools current annotation | `current.annotation.fasta` | 2025-07-15 | **196,953** | 174,400 | seven tissues' proteins in one file |
+| AplysiaTools current annotation | `current.annotation.fasta` | 2025-07-15 | **196,953** | 174,400 | seven tissues' sequences in one file |
 | AplysiaTools per-tissue unigenes | `/unigenes/`, six files | 2023-02-10 | **157,467** | 139,303 | one file per tissue, six tissues |
 
 The dates are the servers' own `Last-Modified` headers, not an inference. They
@@ -51,13 +60,13 @@ comparison is against the source's numbers and not only against ours.
 |---|---|---|
 | clusters | 71,104 | no AplysiaTools file has this count |
 | *"We refer to this set of 68,308 transcripts as 'unigenes'"* | 68,308 | **the GenBank TSA**, exactly |
-| unigenes with a minimum ORF length of 400 bp | 39,486 | **the AplysiaTools CNS protein set**, exactly |
+| unigenes with a minimum ORF length of 400 bp | 39,486 | **the AplysiaTools CNS set**, exactly |
 | transcripts after filtering for those shorter than 400 bp | 38,125 | no AplysiaTools file has this count |
 
 Two of the four land exactly on a file we hold, and they are different files.
 The 68,308 is the full unigene set, before the ORF filter; the 39,486 is that
-set after it. The AplysiaTools CNS protein set *is* the paper's final set, one
-protein per unigene.
+set after it. The AplysiaTools CNS set *is* the paper's final set, one
+sequence per unigene.
 
 ## The overlaps
 
@@ -65,16 +74,16 @@ From `data/derived/transcriptome_overlaps.tsv`:
 
 | Left | Right | Shared | Share of left | Share of right |
 |---|---|---|---|---|
-| CNS protein set | TSA original names | **38,129** | 96.6% | 55.8% |
+| CNS set | TSA original names | **38,129** | 96.6% | 55.8% |
 | merged unigenes | TSA original names | **12,551** | 46.7% | 18.4% |
-| merged unigenes | CNS protein set | 8,089 | 30.1% | 20.5% |
+| merged unigenes | CNS set | 8,089 | 30.1% | 20.5% |
 | merged unigenes | current annotation | 9,826 | 36.6% | 5.6% |
-| CNS protein set | current annotation, CNS set | **39,486** | 100.0% | 100.0% |
+| CNS set | current annotation, CNS set | **39,486** | 100.0% | 100.0% |
 | per-tissue unigenes | current annotation, non-CNS records | **139,303** | 100.0% | 100.0% |
 
 Two rows are exact identities and two more are near-exact:
 
-- **The CNS protein set *is* the CNS set of the current annotation** — the same
+- **The CNS set *is* the CNS set of the current annotation** — the same
   39,486 identifiers, every one of them.
 - **The current annotation decomposes exactly**: its CNS set is 39,486 records
   and the six per-tissue files are 157,467, and 39,486 + 157,467 = 196,953,
@@ -82,7 +91,7 @@ Two rows are exact identities and two more are near-exact:
 - **The six per-tissue files' union is exactly the set of distinct unigenes in
   the current annotation's non-CNS records** — 139,303 on both sides, the same
   set and not merely the same size.
-- **Every one of the 13,314 `asmbl_` identifiers in the CNS protein set is in
+- **Every one of the 13,314 `asmbl_` identifiers in the CNS set is in
   the TSA.** Not "most of them" — all of them.
 
 The current annotation's 174,400 distinct unigenes are 39,486 under CNS and
@@ -115,9 +124,11 @@ annotation files under a CNS prefix and a tissue prefix both.
 
 AplysiaTools writes tissue-prefixed identifiers in `current.annotation.fasta`
 and in the per-tissue files — `salivary.asmbl_100`, `CNS.asmbl_340921` — and
-bare identifiers in the merged-unigene FASTA and in the protein set:
+bare identifiers in the merged-unigene FASTA and in the CNS set:
 `asmbl_100`, `TRINITY_DN69529_c0_g1_i1`. The GenBank TSA carries the bare form
-in its DEFINITION lines, which is the bridge P01-03.2 built.
+in its DEFINITION lines, which is the bridge P01-03.2 built. (P01-03.4 found
+that the FASTA's own headers carry the same names, so the flatfile is the
+second record of the mapping rather than the only one.)
 
 Compared without removing the prefix, the six per-tissue sets look **disjoint
 from each other** — 157,467 records, 157,467 distinct identifiers, nothing
@@ -133,7 +144,7 @@ reports "nothing in common" would be wrong.
 ## Why the two sources disagree
 
 **They are different vintages, and the file dates say so.** The merged-unigene
-FASTA is from 11 November 2020; the CNS protein set from 28 April 2021; the
+FASTA is from 11 November 2020; the CNS set from 28 April 2021; the
 Orvis 2022 assembly was deposited on 10 June 2022; the per-tissue files from
 February 2023; the current annotation from July 2025. Four builds, four
 years, one directory.
@@ -144,7 +155,7 @@ namespace dominates one and not the others:
 | Source | `asmbl_` | `TRINITY_DN` |
 |---|---|---|
 | merged unigenes (`new_unigenes.fasta`) | **24,099** (89.8%) | 2,750 |
-| CNS protein set (`annotation_1A-2C.fasta`) | 13,314 (33.7%) | **26,172** |
+| CNS set (`annotation_1A-2C.fasta`) | 13,314 (33.7%) | **26,172** |
 | TSA original names | 23,003 (33.7%) | **45,305** |
 
 **But they share the assembly generation.** The numeric ranges of the `asmbl_`
@@ -152,7 +163,7 @@ identifiers are essentially the same in all three — 1–341,054, 40–341,049 
 7–341,053 — so these are not two unrelated assemblies. They are two different
 selections from the same assembly, taken at different times.
 
-That is the shape of it: the merged-unigene file and the CNS protein set draw
+That is the shape of it: the merged-unigene file and the CNS set draw
 on one assembly, and the merged-unigene file was built first, from a selection
 that the CNS set does not contain. Of the merged file's 24,099 `asmbl_`
 identifiers, **10,458 are in the TSA and 13,641 are not**.
@@ -166,26 +177,26 @@ of counts or of 50 sampled sequences will make them so. This is filed as a
 deviation, issue [#30], for the researcher to decide; the pre-registration has
 not been edited.
 
-**The pair that does correspond is the CNS protein set and the TSA.** Its count
+**The pair that does correspond is the CNS set and the TSA.** Its count
 is the paper's final count, and 38,129 of its 39,486 identifiers — including
 all 13,314 of its `asmbl_` identifiers — are in the Orvis 2022 transcriptome.
 
 That is what P01-03.4 and P01-03.5 should work on. P01-03.4's "extract 50
 random sequences and confirm they are identical" is a test that **can** succeed
-for the protein set against the TSA, at the level of the underlying
+for the CNS set against the TSA, at the level of the underlying
 transcripts; it cannot succeed for the merged-unigene FASTA, and running it
 against that file would produce a negative result that says more about the
 2020 build than about the data.
 
 **Which build is authoritative** is P01-03.5's decision, and the evidence
-points one way: the TSA and the CNS protein set describe the same
+points one way: the TSA and the CNS set describe the same
 transcriptome, at two levels of processing, and the merged-unigene FASTA
 describes an earlier one.
 
 ## Two limits that carry forward
 
 **The TSA carries no gene models.** Its flatfile has 68,308 `source` features
-and nothing else. Gene models for the lift-off have to come from the protein
+and nothing else. Gene models for the lift-off have to come from the CNS
 set or from the assembly, not from the TSA.
 
 **The paper's 400 bp filter is on ORFs, not on transcripts.** 60,173 of the

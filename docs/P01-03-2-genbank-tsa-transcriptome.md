@@ -4,6 +4,17 @@
 **Status:** complete.
 **Date:** 2026-11-20.
 
+> **Corrected 2026-11-24.** Two corrections. First, this note called
+> AplysiaTools' 39,486-record file the **protein set**; it is nucleotide, like
+> every other transcriptome file AplysiaTools publishes. Second, this note
+> implied the GenBank flatfile was the only record of the mapping between the
+> two identifier namespaces. P01-03.4 found that the TSA FASTA's own headers
+> carry the original assembly names, for all 68,308 records, so the flatfile
+> is the **second, independent** record of the mapping rather than the only
+> one. Neither correction changes a count. See
+> `docs/P01-03-4-sequence-sampling.md`.
+
+
 ## What was fetched
 
 Four files from `https://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/`.
@@ -90,7 +101,7 @@ version pin in §2.1, confirmed by the deposition itself. And `/tissue_type` is
 So the GenBank copy is the paper's **full unigene set**, before the filter.
 The paper's other arm — 71,104 CD-HIT clusters reduced to 39,486 at a minimum
 400 bp ORF — is the filtered set, and **39,486 is exactly the AplysiaTools
-protein set's size** (P01-03.1). The two copies are the same study at two
+CNS set's size** (P01-03.1). The two copies are the same study at two
 stages of its own pipeline.
 
 ## The identifier bridge
@@ -120,20 +131,20 @@ Using that mapping:
 
 | AplysiaTools file | Its identifiers also in the TSA |
 |---|---|
-| predicted protein set (39,486) | **38,129** — 96.5% |
+| CNS set (39,486) | **38,129** — 96.5% |
 | `new_unigenes.fasta` (26,849) | **12,551** — 46.7% |
 
-And within the protein set, **all 13,314 of its `asmbl_` identifiers are in
+And within the CNS set, **all 13,314 of its `asmbl_` identifiers are in
 the TSA**, together with 24,815 of its 26,172 `TRINITY_DN` ones.
 
 So the ordering is:
 
-- the **protein set** is essentially the TSA's content, filtered down to the
+- the **CNS set** is essentially the TSA's content, filtered down to the
   paper's 39,486;
 - the **nucleotide file** is the outlier — barely half of it is in the TSA at
   all.
 
-P01-03.1 compared AplysiaTools' nucleotide file against AplysiaTools' protein
+P01-03.1 compared AplysiaTools' nucleotide file against AplysiaTools' CNS
 set and found only 8,089 shared identifiers, and recorded that the two were
 "not the same sequence set". That is true and it stands, but the third copy
 now shows which of the two is the strange one: it is the nucleotide file. The
@@ -175,8 +186,9 @@ what an unfiltered set that contains many short transcripts looks like.
 Nothing else from the TSA project. The `tsa.GJYY.1.gbff.gz` flatfile was
 initially left alone on the grounds that the pre-registration names the
 FASTA — and it was fetched anyway, because it turned out to carry the
-identifier mapping, which is the only thing that makes the two copies
-comparable by name. That was the right call, and it was not obvious from the
+identifier mapping. (The FASTA's own headers carry the original names too,
+which P01-03.4 established; the flatfile is the second, independent record,
+not the only one.) That was the right call, and it was not obvious from the
 file name.
 
 ## How to check

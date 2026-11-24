@@ -8,18 +8,31 @@ Run it with:
 P01-03.2. The Orvis 2022 transcriptome exists in two places with two
 different identifier namespaces: GenBank TSA GJYY00000000 numbers its
 sequences GJYY01000001-GJYY01068308, while AplysiaTools calls them
-`asmbl_N` or `TRINITY_DN...`. Nothing in the FASTA relates the two.
+`asmbl_N` or `TRINITY_DN...`.
 
-The GenBank flatfile does. Every TSA record's DEFINITION line carries
-the name the sequence had in the original assembly:
+Both the GenBank flatfile and the TSA FASTA carry the original name.
+Every flatfile record's DEFINITION line holds it:
 
     DEFINITION  TSA: Aplysia californica isolate field caught, aquaculture reared
                   TRINITY_DN69521_c0_g1_i1, transcribed RNA sequence.
 
-That mapping is the only bridge between the two namespaces, and without
-it the two copies of the transcriptome can only be compared by sequence
-content - which is what P01-03.4 does. This script writes the mapping
-so that the comparison can be done by name as well.
+and every FASTA header holds it too, in the same place:
+
+    >GJYY01000001.1 TSA: Aplysia californica isolate field caught, aquaculture
+    reared TRINITY_DN69521_c0_g1_i1, transcribed RNA sequence.
+
+P01-03.2 established the flatfile route. P01-03.4 checked the FASTA route
+and found it agrees with the flatfile for all 68,308 names, so this script
+is the second, independent record of the mapping rather than the only one.
+Its docstring previously said that nothing in the FASTA related the two,
+which was wrong.
+
+    DEFINITION  TSA: Aplysia californica isolate field caught, aquaculture reared
+                  TRINITY_DN69521_c0_g1_i1, transcribed RNA sequence.
+
+That mapping is what lets the two copies of the transcriptome be compared
+by name, and it is also what P01-03.4 does by sequence content. This
+script writes it out so that the comparison can be done both ways.
 
 It writes:
 

@@ -4,6 +4,19 @@
 **Status:** complete.
 **Date:** 2026-11-18.
 
+> **Corrected 2026-11-24.** This note called `annotation_1A-2C.fasta` and
+> `current.annotation.fasta` **protein** sets. They are not. Every residue in
+> all 39,486 records of the first and all 196,953 records of the second is A,
+> C, G or T — there is not one amino-acid letter in 500 megabases of sequence.
+> The counts, the overlaps and the identifiers in this note are unaffected;
+> only the word was wrong. The consequence is not cosmetic, and it is the
+> reason the correction is banner-ed rather than quietly edited: AplysiaTools
+> publishes **no protein sequences at all**, so the "predicted protein set"
+> that §3.2 step 1 asks for cannot be obtained there and has to be derived
+> locally by P01-10.1. That is deviation **D005** (issue #32). See
+> `docs/P01-03-4-sequence-sampling.md`.
+
+
 ## What was fetched
 
 Four files from `http://aplysiatools.org/data/`.
@@ -11,8 +24,8 @@ Four files from `http://aplysiatools.org/data/`.
 | File | Bytes | What it is | Server's Last-Modified |
 |---|---|---|---|
 | `new_unigenes.fasta` | 96,749,623 | the merged-unigene **nucleotide** FASTA | 2020-11-11 |
-| `annotation_1A-2C.fasta` | 97,345,806 | the predicted **protein** set for the CNS transcriptome | 2021-04-28 |
-| `current.annotation.fasta` | 427,357,077 | the live **current** annotation: every tissue's proteins in one file | 2025-07-15 |
+| `annotation_1A-2C.fasta` | 97,345,806 | the **CNS** set: one nucleotide sequence per unigene, with predicted product names | 2021-04-28 |
+| `current.annotation.fasta` | 427,357,077 | the live **current** annotation: every tissue's sequences in one file | 2025-07-15 |
 | `merged.unigenes.trinotate.longest_orf.json` | 4,487,388 | the Trinotate functional annotation of the merged unigenes | 2020-11-11 |
 
 SHA-256 for all four is in `data/manifest.tsv`, along with the URL each came
@@ -63,17 +76,17 @@ What the files actually contain:
 | Source | Records |
 |---|---|
 | `new_unigenes.fasta` | **26,849** nucleotide sequences (94,756,984 nt; min 297, median 2,366, max 48,455) |
-| `annotation_1A-2C.fasta` | **39,486** proteins |
-| `current.annotation.fasta`, CNS subset | **39,486** proteins |
-| `current.annotation.fasta`, all tissues | **196,953** proteins |
+| `annotation_1A-2C.fasta` | **39,486** nucleotide sequences |
+| `current.annotation.fasta`, CNS subset | **39,486** nucleotide sequences |
+| `current.annotation.fasta`, all tissues | **196,953** nucleotide sequences |
 | `merged.unigenes.trinotate.longest_orf.json` | **24,339** annotated unigenes |
 
-**39,486 is exactly the paper's final count.** The CNS protein set is the
-paper's unigene set, one protein per unigene.
+**39,486 is exactly the paper's final count.** The CNS set is the
+paper's unigene set, one sequence per unigene.
 
 But the nucleotide file does not agree with it. Of `new_unigenes.fasta`'s
-26,849 identifiers, only **8,089** appear in the 39,486-protein set; 9,826
-appear anywhere in the 196,953-protein current annotation. The two files are
+26,849 identifiers, only **8,089** appear in the 39,486-sequence CNS set; 9,826
+appear anywhere in the 196,953-sequence current annotation. The two files are
 not the same sequence set, and they are not in a subset relationship.
 
 So AplysiaTools publishes at least three different generations of the same
@@ -83,7 +96,7 @@ transcriptome, and the counts are:
 |---|---|---|
 | merged unigenes, nucleotide | `new_unigenes.fasta` | 26,849 |
 | the same, functionally annotated | `merged.unigenes.trinotate.longest_orf.json` | 24,339 |
-| the paper's final unigene set, as proteins | `annotation_1A-2C.fasta` | 39,486 |
+| the paper's final unigene set, as nucleotide | `annotation_1A-2C.fasta` | 39,486 |
 
 The Trinotate JSON annotates 24,339 of the 26,849 in `new_unigenes.fasta` —
 the 2,510 that carry no annotation are the difference. That relationship is
@@ -94,10 +107,10 @@ counts of the two are identical at 2,750 each.
 
 `annotation_1A-2C.fasta` (2021) and the CNS subset of
 `current.annotation.fasta` (2025) have **the same 39,486 identifiers and
-100% identical protein sequences** — every one of the 39,486 was checked, not
+100% identical sequences** — every one of the 39,486 was checked, not
 a sample. The 2025 file is the same CNS set plus six other tissues:
 
-| Tissue | Proteins |
+| Tissue | Sequences |
 |---|---|
 | CNS | 39,486 |
 | muscle | 32,933 |
@@ -107,7 +120,7 @@ a sample. The 2025 file is the same CNS set plus six other tissues:
 | heart | 25,467 |
 | salivary | 19,329 |
 
-So the protein set the pre-registration asks for is available in two files and
+So the CNS set the pre-registration asks for is available in two files and
 does not need to be derived: `annotation_1A-2C.fasta` is it.
 
 The naming is AplysiaTools' own and the paper does not explain it — "1A-2C"
@@ -182,7 +195,7 @@ The Orvis supplementary appendix anticipates exactly this:
 > or available for download
 
 So the three copies of the Orvis 2022 transcriptome — AplysiaTools'
-`new_unigenes.fasta`, AplysiaTools' 39,486-protein set, and the GenBank TSA
+`new_unigenes.fasta`, AplysiaTools' 39,486-sequence CNS set, and the GenBank TSA
 `GJYY00000000` that P01-03.2 fetches — are three more instances of the same
 problem, and the counts in this note are the starting evidence for resolving
 it rather than a conclusion.
@@ -213,21 +226,21 @@ P01-03.2 fetched the third copy of this transcriptome, from GenBank TSA
 outlier.
 
 The GenBank flatfile carries the original assembly names in its DEFINITION
-lines, which is the only bridge between the two identifier namespaces. With
+lines, which is the bridge between the two identifier namespaces. With
 it, the overlap is:
 
 | AplysiaTools file | Its identifiers also in the TSA |
 |---|---|
-| predicted protein set (39,486) | **38,129** — 96.5% |
+| CNS set (39,486) | **38,129** — 96.5% |
 | `new_unigenes.fasta` (26,849) | **12,551** — 46.7% |
 
-So the protein set is very nearly the TSA's content, filtered down to the
+So the CNS set is very nearly the TSA's content, filtered down to the
 paper's 39,486 — and **all 13,314** of its `asmbl_` identifiers are in the
 TSA. The nucleotide file is the strange one: barely half of it is in the TSA
 at all.
 
 What this note recorded above still stands. The nucleotide file and the
-protein set are not the same sequence set, and only 8,089 identifiers are
+CNS set are not the same sequence set, and only 8,089 identifiers are
 shared between them. But the third copy shows that of the two, it is the
-**nucleotide file** that is the odd one out, not the protein set. P01-03.3
+**nucleotide file** that is the odd one out, not the CNS set. P01-03.3
 to P01-03.5 now have that much to work with.
