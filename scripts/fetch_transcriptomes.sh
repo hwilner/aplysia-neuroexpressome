@@ -38,6 +38,7 @@ MANIFEST="${ROOT}/data/manifest.tsv"
 FILES=(
   "new_unigenes.fasta"
   "annotation_1A-2C.fasta"
+  "annotation.1A-2C.trinotate.col1cut.json"
   "current.annotation.fasta"
   "merged.unigenes.trinotate.longest_orf.json"
   "tsa.GJYY.1.fsa_nt.gz"
@@ -48,8 +49,9 @@ FILES=(
 
 WHAT=(
   "the merged-unigene nucleotide FASTA"
-  "the predicted protein set for the CNS transcriptome"
-  "the live current annotation: every tissue's proteins in one file"
+  "the CNS set: the paper's final unigenes at a 400 bp ORF filter"
+  "the Trinotate functional annotation of the CNS set, one entry per transcript"
+  "the live current annotation: every tissue's sequences in one file"
   "the Trinotate functional annotation of the merged unigenes"
   "the Orvis 2022 CNS transcriptome, from GenBank TSA GJYY00000000"
   "the same transcriptome in GenBank flatfile format: its DEFINITION lines carry the original names"
@@ -57,11 +59,12 @@ WHAT=(
   "the publisher's own counts for the TSA project"
 )
 
-# Where each file comes from. The first four are AplysiaTools; the last
-# three are the GenBank Transcriptome Shotgun Assembly.
+# Where each file comes from. The first five are AplysiaTools; the last
+# four are the GenBank Transcriptome Shotgun Assembly.
 URLS=(
   "${BASE}/new_unigenes.fasta"
   "${BASE}/annotation_1A-2C.fasta"
+  "${BASE}/annotation.1A-2C.trinotate.col1cut.json"
   "${BASE}/current.annotation.fasta"
   "${BASE}/merged.unigenes.trinotate.longest_orf.json"
   "${TSA_BASE}/tsa.GJYY.1.fsa_nt.gz"

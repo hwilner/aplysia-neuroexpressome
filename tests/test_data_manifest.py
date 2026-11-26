@@ -29,6 +29,7 @@ import hashlib
 import os
 import re
 import subprocess
+import tempfile
 import unittest
 
 REPO_ROOT = os.path.join(os.path.dirname(__file__), os.pardir)
@@ -150,6 +151,41 @@ class ManifestTest(unittest.TestCase):
 
     def test_the_manifest_exists(self):
         self.assertTrue(os.path.exists(MANIFEST))
+
+    def test_the_generator_refuses_to_write_a_manifest_short_of_a_file(self):
+        """The generator's presence check has to actually check something.
+
+        The script's contract is that it will not write a manifest that is
+        quietly short of a file. Until 2026-11-26 it did not: the loop
+        walked an array that was never defined, so it checked nothing and
+        the "MISSING" branch was dead code. A missing file still failed the
+        script, but on the `stat` that follows, which says nothing about
+        which file was missing.
+
+        This runs the generator against a raw directory that is empty and
+        requires it to refuse, and to name what was missing.
+        """
+        with tempfile.TemporaryDirectory() as empty:
+            result = subprocess.run(
+                ["bash", "scripts/make_manifest.sh"],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                env={
+                    **os.environ,
+                    "APLYSIAS_RAW_DIR": empty,
+                    "APLYSIAS_MANIFEST": os.path.join(empty, "manifest.tsv"),
+                },
+                check=False,
+            )
+            self.assertNotEqual(
+                result.returncode, 0, "the generator wrote a manifest with no files"
+            )
+            self.assertIn("MISSING", result.stdout + result.stderr)
+            self.assertFalse(
+                os.path.exists(os.path.join(empty, "manifest.tsv")),
+                "the generator wrote a manifest it should have refused to write",
+            )
 
     def test_the_manifest_is_not_ignored(self):
         # The manifest is the committed record of the inputs. If it were

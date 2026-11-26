@@ -271,16 +271,24 @@ set the paper's own completeness analysis was computed on. Using it as the
 analysis input is what makes the project's numbers comparable with the
 paper's.
 
-Three further reasons point the same way. The 1,357 transcripts that the CNS
-set has and the deposition does not are **not** in the deposition under any
-name, and none of them is a renamed copy of a deposited transcript: every
-sequence in both files was hashed and the cross-namespace match count is
-zero. Taking the TSA as the analysis input would silently drop 1,357 of the
-paper's final 39,486. Where the two copies do differ, in 12 transcripts, the
-CNS copy is the **longer** one, by a contiguous extension of 35 to 71 bases
-at one end. And the CNS set is the one whose functional annotation the
-curation stages need: `annotation.1A-2C.trinotate.col1cut.json` sits beside
-it, and the GenBank flatfile carries no gene models at all.
+Three further reasons point the same way. **The strongest is that the
+functional annotation's identifiers are the set's identifiers, exactly.**
+AplysiaTools publishes the Trinotate annotation of the CNS set beside it,
+`annotation.1A-2C.trinotate.col1cut.json`, and it has 39,486 entries whose
+identifiers are the CNS set's identifiers and nothing else — not one more,
+not one fewer, no identifier on either side that the other lacks. Two
+independent files agree on their membership completely, and a curation step
+that dropped, split or renamed a transcript would have broken that. Every
+entry carries a product name and at least one Pfam hit; 22,145 carry GO
+terms. The 1,357 transcripts that the CNS set has and the deposition does
+not are **not** in the deposition under any name, and none of them is a
+renamed copy of a deposited transcript: every sequence in both files was
+hashed and the cross-namespace match count is zero. Taking the TSA as the
+analysis input would silently drop 1,357 of the paper's final 39,486.
+Where the two copies do differ, in 12 transcripts, the CNS copy is the
+**longer** one, by a contiguous extension of 35 to 71 bases at one end. And
+the CNS set is the one whose functional annotation the curation stages need,
+while the GenBank flatfile carries no gene models at all.
 
 The 2020 build is excluded because it matches no count the paper publishes,
 and it was named in the pre-registration only because the pre-registration was

@@ -28,6 +28,7 @@ changes, which trains the reader to ignore the failures.
 """
 
 import csv
+import json
 import os
 import subprocess
 import sys
@@ -105,6 +106,16 @@ def read_manifest():
             row["file"]: row
             for row in csv.DictReader(handle, delimiter="\t")
         }
+
+
+def cns_identifiers():
+    """Return the identifiers of the CNS set, as a set."""
+    identifiers = set()
+    with open(os.path.join(RAW, "annotation_1A-2C.fasta"), encoding="utf-8") as handle:
+        for line in handle:
+            if line.startswith(">"):
+                identifiers.add(line[1:].strip().split()[0])
+    return identifiers
 
 
 class TheCommittedRecord(unittest.TestCase):
@@ -431,6 +442,38 @@ class TheBytes(unittest.TestCase):
         self.assertEqual(
             result.returncode, 0, result.stdout + result.stderr
         )
+
+    def test_the_cns_annotation_covers_the_cns_set_exactly(self):
+        """The functional annotation is one entry per transcript, no more.
+
+        This is the strongest single piece of evidence that the CNS set is
+        the paper's final 39,486 unigene set. AplysiaTools publishes the
+        Trinotate annotation beside it, and that annotation has exactly
+        39,486 entries whose identifiers are the CNS set's identifiers and
+        nothing else: not one more, not one fewer, no id on either side
+        that the other does not have.
+        """
+        path = os.path.join(RAW, "annotation.1A-2C.trinotate.col1cut.json")
+        if not os.path.exists(path):
+            self.skipTest("the CNS Trinotate annotation is not present")
+        with open(path, encoding="utf-8") as handle:
+            entries = json.load(handle)
+        self.assertEqual(len(entries), 39486)
+        identifiers = {entry["id"] for entry in entries}
+        self.assertEqual(len(identifiers), 39486)
+        self.assertEqual(identifiers, cns_identifiers())
+
+    def test_every_cns_annotation_entry_names_a_product(self):
+        """The curation stages need a product name for every transcript."""
+        path = os.path.join(RAW, "annotation.1A-2C.trinotate.col1cut.json")
+        if not os.path.exists(path):
+            self.skipTest("the CNS Trinotate annotation is not present")
+        with open(path, encoding="utf-8") as handle:
+            entries = json.load(handle)
+        without = [e["id"] for e in entries if not e.get("product")]
+        self.assertEqual(without, [], "entries with no product name")
+        with_pfam = [e for e in entries if e.get("pfams")]
+        self.assertEqual(len(with_pfam), len(entries), "entries with no Pfam hit")
 
 
 if __name__ == "__main__":

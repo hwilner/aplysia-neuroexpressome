@@ -54,21 +54,40 @@ the integer, with the set the paper's own completeness analysis was computed
 on. The CNS set is that set.
 
 The GenBank copy has **68,308** records, which is the paper's other published
-number — "We refer to this set of 68,308 transcripts as 'unigenes', or 38,125
-transcripts after filtering for those shorter than 400 bp". So the deposition
-is the same build **one filter earlier**: 68,308 before the 400 bp ORF
-filter, 39,486 after it.
+number — "We refer to this set of 68,308 transcripts as “unigenes,” or 38,125
+transcripts after filtering for those shorter than 400 bp (Fig. 1A)". So the
+deposition is the same build **one filter earlier**: 68,308 before the 400 bp
+ORF filter, 39,486 after it.
 
 **That is the whole of the relation, and it is a good one.** The two files are
 not competing versions of the transcriptome. They are the same build at two
 stages of its own curation, and the project's working set is the curated one.
 
-Three further things support running on the CNS set:
+## The strongest evidence: the annotation's identifiers are the set's identifiers
 
-- **It is the set the downstream stages need.** `annotation.1A-2C.trinotate.col1cut.json`
-  sits beside it with the functional product names, Pfam hits and GO terms
-  the curation stages consume. The GenBank flatfile carries no gene models at
-  all.
+AplysiaTools publishes the Trinotate functional annotation of the CNS set
+beside it, `annotation.1A-2C.trinotate.col1cut.json`. That file has **39,486
+entries**, and **their identifiers are the CNS set's identifiers, exactly** —
+39,486 to 39,486, with not one identifier on either side that the other does
+not have.
+
+That is a much stronger statement than "the counts match". Two independent
+files, the sequence set and its functional annotation, agree on their
+membership completely. A curation step that dropped, split or renamed a
+transcript would break that agreement, and it has not broken it. Every entry
+carries a product name, every entry carries at least one Pfam hit, and 22,145
+carry GO terms.
+
+The file is now fetched by `scripts/fetch_transcriptomes.sh`, checksummed in
+`data/manifest.tsv` (SHA-256
+`7bfb1db284fa4639f95b1df75070a3029d585e3aea3781c7e12ddfd06a1eb998`), and the
+agreement is a test.
+
+## Three further things support running on the CNS set
+
+- **The curation stages need its annotation, and the deposition has none.**
+  The product names, Pfam hits and GO terms the review queue is built from
+  come with the CNS set. The GenBank flatfile carries no gene models at all.
 - **The 12 disagreements are the CNS copy being *longer*.** P01-03.4 found 12
   transcripts that differ, and every one is the same transcript with 35 to 71
   extra bases at one end — a contiguous extension, never a difference in the
@@ -219,3 +238,15 @@ carried five wrong purpose strings and put the 2020 build and the
 multi-tissue annotation under the TSA accession, which they do not belong
 to. The checksums did not move; the descriptions and the accession columns
 did.
+
+**The CNS set's Trinotate annotation was added to the manifest**, so that the
+claim above is checkable rather than anecdotal. It is fetched by
+`scripts/fetch_transcriptomes.sh` and checksummed like every other input.
+
+**One bug in the manifest generator was found and fixed.** The script's
+presence check walked an array that was never defined, so it checked nothing
+and its "MISSING" branch was dead code. A missing file still failed the
+script, but on the `stat` that followed, which does not say which file was
+missing. The check now walks the rows it is about to write, and there is a
+test that points the generator at an empty directory and requires it to
+refuse.

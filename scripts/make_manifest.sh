@@ -52,8 +52,11 @@ TSA_BASE="https://ftp.ncbi.nlm.nih.gov/genbank/tsa/G"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(dirname "$HERE")"
-RAW="${ROOT}/data/raw"
-OUT="${ROOT}/data/manifest.tsv"
+# The paths can be overridden, so that a test can point the generator at an
+# empty directory and check that it refuses, without touching the real
+# manifest.
+RAW="${APLYSIAS_RAW_DIR:-${ROOT}/data/raw}"
+OUT="${APLYSIAS_MANIFEST:-${ROOT}/data/manifest.tsv}"
 
 # The files, and what the pre-registration uses each for.
 #
@@ -81,7 +84,8 @@ ROWS=(
   "Aplysia_californica_AR102_annotation_report.xml|${ASSEMBLY}|${RELEASE}|${BASE}/Aplysia_californica_AR102_annotation_report.xml|the Release 102 annotation report"
   "README_Aplysia_californica_annotation_release_102|${ASSEMBLY}|${RELEASE}|${BASE}/README_Aplysia_californica_annotation_release_102|the release readme, which states the release strings"
   "new_unigenes.fasta|none|${TOOLS_2020}|${TOOLS_BASE}/new_unigenes.fasta|the 2020 merged-unigene build: 26,849 nucleotide sequences, a subset of the 2022 assembly that matches no published count. Not the analysis input"
-  "annotation_1A-2C.fasta|${TSA}|${TOOLS_CNS}|${TOOLS_BASE}/annotation_1A-2C.fasta|the CNS set: 39,486 nucleotide sequences, the paper's final unigene set at a minimum ORF length of 400 bp, carrying the Trinotate product names. The analysis input"
+  "annotation_1A-2C.fasta|${TSA}|${TOOLS_CNS}|${TOOLS_BASE}/annotation_1A-2C.fasta|the CNS set: 39,486 nucleotide sequences, the paper's final unigene set at a minimum ORF length of 400 bp. The analysis input"
+  "annotation.1A-2C.trinotate.col1cut.json|${TSA}|${TOOLS_CNS}|${TOOLS_BASE}/annotation.1A-2C.trinotate.col1cut.json|the Trinotate functional annotation of the CNS set: 39,486 entries, one per transcript of the analysis input, with the product name, the Pfam hits and the GO terms the curation stages consume"
   "current.annotation.fasta|none|${TOOLS_CURRENT}|${TOOLS_BASE}/current.annotation.fasta|AplysiaTools' live annotation: every tissue's nucleotide sequences in one file, of which the CNS subset is identical to annotation_1A-2C.fasta"
   "merged.unigenes.trinotate.longest_orf.json|none|${TOOLS_2020}|${TOOLS_BASE}/merged.unigenes.trinotate.longest_orf.json|the Trinotate functional annotation of the 2020 merged unigenes: product, Pfam and GO"
   "tsa.GJYY.1.fsa_nt.gz|${TSA}|${TRANSCRIPTOME}|${TSA_BASE}/tsa.GJYY.1.fsa_nt.gz|the Orvis 2022 CNS transcriptome as deposited: 68,308 transcripts, the paper's DN-Trinity arm. The citable accession and the independent check on the sequences, whose record count, base total and length extremes all match the publisher's published aggregates in stats.tsa.GJYY"
@@ -98,7 +102,8 @@ fi
 
 echo "==> checking that every file is present"
 MISSING=0
-for FILE in "${FILES[@]}"; do
+for ROW in "${ROWS[@]}"; do
+  FILE="${ROW%%|*}"
   if [ ! -f "${RAW}/${FILE}" ]; then
     echo "    MISSING ${FILE}" >&2
     MISSING=1
