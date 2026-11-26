@@ -10,12 +10,14 @@ stated in the manuscript methods. The pre-registration is not edited silently.
 | D003 | [#28](https://github.com/hwilner/aplysia-neuroexpressome/issues/28) | §2.1 names the genome assembly as `GCF_000002075.2`, an accession that does not resolve |
 | D004 | [#30](https://github.com/hwilner/aplysia-neuroexpressome/issues/30) | §3.2 step 1 asks that two transcriptome sources be confirmed as the same underlying build; they are two different builds |
 | D005 | [#32](https://github.com/hwilner/aplysia-neuroexpressome/issues/32) | §3.2 step 1 asks for a protein set from AplysiaTools, which publishes no protein sequences at all |
+| D006 | [#33](https://github.com/hwilner/aplysia-neuroexpressome/issues/33) | §2.1's transcriptome row and §3.2 step 1 name a single lift-off source; the project runs on the AplysiaTools CNS set and cites the GenBank deposition, and the 2020 merged-unigene build is excluded |
 
-**D002, D003, D004 and D005 are open.** `materials-and-methods.md` §2.2 still
-describes the pre-registered toolchain, §2.1 still names an assembly accession
-that cannot be fetched, §3.2 step 1 still asks for a confirmation that cannot
-succeed and for a protein set that is not published. None of them is edited
-until the issue is decided.
+**D002, D003, D004, D005 and D006 are open.** `materials-and-methods.md` §2.2
+still describes the pre-registered toolchain, §2.1 still names an assembly
+accession that cannot be fetched, §3.2 step 1 still asks for a confirmation
+that cannot succeed and for a protein set that is not published, and neither
+§2.1 nor §3.2 step 1 yet says which of the two transcriptome files is the
+lift-off source. None of them is edited until the issue is decided.
 
 ## D001 - clusterProfiler dropped; enrichment is implemented in base R
 
@@ -235,3 +237,74 @@ differing. The twelve are the same transcript with 35 to 71 extra bases at one
 end. Nothing was changed to make that result: the sample is seeded, the
 identifiers are sorted before the draw, and the comparison is also run
 exhaustively. The protein set's provenance bears on none of it.
+
+## D006 - the lift-off source is named, and it is not the merged-unigene FASTA
+
+**Date:** 2026-11-26. **Subtask:** P01-03.5. **Affects:** `materials-and-methods.md` §2.1's transcriptome row and §3.2 step 1.
+
+**Pre-registered:** §2.1 names one transcriptome assembly, "GenBank TSA
+`GJYY00000000` (Orvis et al. 2022); also via AplysiaTools `aplysiatools.org`",
+with "Lift-off source, gene-model repair source" in the *Used for* column.
+§3.2 step 1 names the merged-unigene FASTA as the thing to obtain and to
+confirm.
+
+**Changed:** the lift-off source is named, and it is **the AplysiaTools CNS
+set**, `annotation_1A-2C.fasta`, 39,486 records, SHA-256
+`a35b3cbc1f4e361c5a4e83227c135fa5cd792bdbe52ffa72953eb168c5b9dc6a`. The
+GenBank TSA `GJYY00000000` remains the accession the project cites and the
+independent check on the sequences. The merged-unigene FASTA,
+`new_unigenes.fasta`, 26,849 records, is **excluded** from every stage. The
+decision is recorded in `data/authoritative-build.tsv` and checked by
+`scripts/authoritative_build.py`.
+
+**Why:** the two files are the same build at two stages of its own curation,
+and the paper's own counts say which stage is which.
+
+| | the paper says | the file has |
+|---|---|---|
+| final combined unigenes at a 400 bp ORF filter (Fig. 1A) | **39,486** | 39,486 in `annotation_1A-2C.fasta` |
+| the deposited "unigenes", before that filter | **68,308** | 68,308 in the TSA, and `stats.tsa.GJYY` agrees |
+| after filtering for those shorter than 400 bp | 38,125 | 38,129 identifiers in the TSA, 1,357 not |
+
+Fig. 1C's BUSCO is on "the final combined set of unigenes", so 39,486 is the
+set the paper's own completeness analysis was computed on. Using it as the
+analysis input is what makes the project's numbers comparable with the
+paper's.
+
+Three further reasons point the same way. The 1,357 transcripts that the CNS
+set has and the deposition does not are **not** in the deposition under any
+name, and none of them is a renamed copy of a deposited transcript: every
+sequence in both files was hashed and the cross-namespace match count is
+zero. Taking the TSA as the analysis input would silently drop 1,357 of the
+paper's final 39,486. Where the two copies do differ, in 12 transcripts, the
+CNS copy is the **longer** one, by a contiguous extension of 35 to 71 bases
+at one end. And the CNS set is the one whose functional annotation the
+curation stages need: `annotation.1A-2C.trinotate.col1cut.json` sits beside
+it, and the GenBank flatfile carries no gene models at all.
+
+The 2020 build is excluded because it matches no count the paper publishes,
+and it was named in the pre-registration only because the pre-registration was
+written before the counts were compared.
+
+**Consequence:** none for the analysis, and none that has been seen — no
+analysis has been run yet. What changes is which file the later stages read.
+Gate G2's denominator follows from it: the lifted fraction is a fraction of
+the 39,486-transcript analysis set, not of the 68,308-transcript deposition.
+§3.2 step 1's comparison is still run and still reported, and it reports
+agreement for the pair that matters.
+
+**The one residual, stated rather than smoothed away.** The paper's counts
+partition the 39,486 into 38,125 and 1,361; the namespace partitions the same
+39,486 into 38,129 and 1,357. The totals agree exactly and the partition
+differs by four transcripts. Renaming is ruled out (0 cross-namespace
+sequence matches), duplication is ruled out (39,486 records, 39,486 distinct
+sequences), and differing membership is ruled out (both published counts match
+exactly). The residual is four transcripts in 39,486 — 0.010% — and it does
+not move the decision. Resolving it needs SI Table S3, the per-transcript
+list, which could not be fetched.
+
+**Reversal:** the analysis input is one line in `data/authoritative-build.tsv`
+and one constant in `scripts/authoritative_build.py`. Changing it means
+re-running `scripts/authoritative_build.py write`, and the record counts and
+digests would be re-derived from the new file rather than typed.
+

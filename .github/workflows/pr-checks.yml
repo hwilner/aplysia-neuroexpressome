@@ -97,6 +97,15 @@ jobs:
           set -euo pipefail
           python3 -m unittest discover -s tests -v
 
+      # The authoritative-build record names the file the project analyses and
+      # the accession it cites. It is checked here against data/manifest.tsv,
+      # and against the raw bytes wherever the raw files are present, so that
+      # a record that has drifted from the files it describes cannot pass.
+      - name: The authoritative-build record is sound
+        run: |
+          set -euo pipefail
+          python3 scripts/authoritative_build.py check
+
       - name: The workflow files are structurally sound
         run: |
           set -euo pipefail

@@ -71,8 +71,12 @@ INPUTS = [
 ]
 
 # The accessions a file may belong to: the RefSeq assembly for the genome
-# and its annotation, the GenBank TSA project for the transcriptomes.
-ACCESSIONS = ("GCF_000002075.1", "GJYY00000000")
+# and its annotation, the GenBank TSA project for the transcriptomes, and
+# `none` for the AplysiaTools files that are not part of any project --
+# the 2020 merged-unigene build and the 2025 multi-tissue annotation, which
+# predate or outscope the Orvis 2022 assembly. P01-03.3 established that
+# the AplysiaTools directory is not one build.
+ACCESSIONS = ("GCF_000002075.1", "GJYY00000000", "none")
 
 # The two publishers the inputs come from.
 PUBLISHERS = (
@@ -185,6 +189,30 @@ class ManifestTest(unittest.TestCase):
         for row in manifest_rows():
             self.assertIn(row["accession"], ACCESSIONS, row["file"])
             self.assertTrue(row["annotation_release"].strip(), row["file"])
+
+    def test_only_the_a_fewer_files_may_belong_to_no_project(self):
+        """A file that says `none` must be a file no accession covers.
+
+        The rule, over every row rather than over a named few: the files
+        deposited under GenBank TSA GJYY00000000 and the RefSeq assembly
+        GCF_000002075.1 carry their accession, and only the AplysiaTools
+        files that are not part of any project say `none`. A file that lost
+        its accession by accident would otherwise look deliberate.
+        """
+        for row in manifest_rows():
+            if row["accession"] != "none":
+                continue
+            self.assertTrue(
+                row["url"].startswith("http://aplysiatools.org/"),
+                f"{row['file']} says it belongs to no project, but it is not "
+                f"served by AplysiaTools",
+            )
+            self.assertNotIn(
+                "tsa.GJYY",
+                row["file"],
+                f"{row['file']} is a GenBank TSA file and cannot belong to no "
+                f"project",
+            )
 
     def test_the_urls_point_at_a_publisher(self):
         for row in manifest_rows():

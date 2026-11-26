@@ -159,10 +159,33 @@ class RecordTest(unittest.TestCase):
                 return
         self.fail("the TSA FASTA is not in the manifest")
 
-    def test_the_transcriptomes_belong_to_the_transcriptome_project(self):
+    def test_the_cns_set_belongs_to_the_transcriptome_project(self):
+        """The CNS set is the project's own CNS set.
+
+        It is the paper's final unigene set at the 400 bp ORF filter, and
+        38,129 of its identifiers are deposited under the TSA accession, so
+        it belongs to the project the accession names.
+        """
         for row in manifest_rows():
-            if row["file"] in TRANSCRIPTOMES:
+            if row["file"] == PROTEINS:
                 self.assertEqual(row["accession"], "GJYY00000000", row["file"])
+                return
+        self.fail(f"{PROTEINS} is not in the manifest")
+
+    def test_the_other_tools_files_belong_to_no_project(self):
+        """The 2020 build and the 2025 annotation belong to no project.
+
+        This is the correction P01-03.3 forced. The AplysiaTools directory
+        holds files from four years, and only the CNS set is part of the
+        Orvis 2022 assembly: the merged unigenes are two years older than
+        the deposition and match no published count, and the current
+        annotation spans seven tissues, six of which are outside the
+        project entirely. Filing them under the TSA accession said they
+        were in the project, and they are not.
+        """
+        for row in manifest_rows():
+            if row["file"] in (NUCLEOTIDE, CURRENT, TRINOTATE):
+                self.assertEqual(row["accession"], "none", row["file"])
 
     def test_no_published_checksum_is_claimed_for_them(self):
         for row in manifest_rows():

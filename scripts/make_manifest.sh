@@ -41,6 +41,12 @@ BASE="https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/002/075/${ASSEMBLY}_${ASS
 # other place to get the same build.
 TSA="GJYY00000000"
 TRANSCRIPTOME="Orvis et al. 2022 CNS transcriptome"
+# The AplysiaTools files are from four different years, and three of them
+# are not part of the GenBank TSA project at all. The accession column says
+# which project a file belongs to; for those three it is "none".
+TOOLS_2020="AplysiaTools merged unigenes, 2020 build"
+TOOLS_CNS="AplysiaTools CNS set"
+TOOLS_CURRENT="AplysiaTools current annotation"
 TOOLS_BASE="http://aplysiatools.org/data"
 TSA_BASE="https://ftp.ncbi.nlm.nih.gov/genbank/tsa/G"
 
@@ -54,10 +60,13 @@ OUT="${ROOT}/data/manifest.tsv"
 # Each row is: file | accession | release | url | purpose
 #
 # The accession is what the file belongs to. For the genome and its
-# annotation that is a RefSeq assembly accession; for the transcriptomes
-# it is the GenBank TSA project the Orvis 2022 assembly was deposited
-# under, which is the same accession the pre-registration names for the
-# transcriptome.
+# annotation that is a RefSeq assembly accession; for the GenBank
+# transcriptomes it is the TSA project the Orvis 2022 assembly was
+# deposited under. For the AplysiaTools files it is "none" unless the file
+# is part of that project: the 2020 merged unigenes are an earlier build,
+# and the current annotation spans seven tissues, six of which are not in
+# the project at all. P01-03.5 established which build the project runs
+# on; the decision itself is recorded in data/authoritative-build.tsv.
 ROWS=(
   "md5checksums.txt|${ASSEMBLY}|AplCal3.0 assembly directory|${BASE}/md5checksums.txt|the publisher's checksum list for the assembly directory, from which the md5 column is taken"
   "${ASSEMBLY}_${ASSEMBLY_NAME}_genomic.fna.gz|${ASSEMBLY}|${ASSEMBLY_NAME} assembly|${BASE}/${ASSEMBLY}_${ASSEMBLY_NAME}_genomic.fna.gz|the assembly: the lift-over target and the coordinate frame"
@@ -71,12 +80,12 @@ ROWS=(
   "${ASSEMBLY}_${ASSEMBLY_NAME}_feature_count.txt.gz|${ASSEMBLY}|${RELEASE}|${BASE}/${ASSEMBLY}_${ASSEMBLY_NAME}_feature_count.txt.gz|NCBI's own counts of the annotation"
   "Aplysia_californica_AR102_annotation_report.xml|${ASSEMBLY}|${RELEASE}|${BASE}/Aplysia_californica_AR102_annotation_report.xml|the Release 102 annotation report"
   "README_Aplysia_californica_annotation_release_102|${ASSEMBLY}|${RELEASE}|${BASE}/README_Aplysia_californica_annotation_release_102|the release readme, which states the release strings"
-  "new_unigenes.fasta|${TSA}|${TRANSCRIPTOME}|${TOOLS_BASE}/new_unigenes.fasta|the merged-unigene nucleotide FASTA: the lift-off source for step 3"
-  "annotation_1A-2C.fasta|${TSA}|${TRANSCRIPTOME}|${TOOLS_BASE}/annotation_1A-2C.fasta|the predicted protein set for the CNS transcriptome: the DIAMOND and Liftoff input"
-  "current.annotation.fasta|${TSA}|${TRANSCRIPTOME}|${TOOLS_BASE}/current.annotation.fasta|the live current annotation: every tissue's proteins in one file, of which the CNS subset is identical to annotation_1A-2C.fasta"
-  "merged.unigenes.trinotate.longest_orf.json|${TSA}|${TRANSCRIPTOME}|${TOOLS_BASE}/merged.unigenes.trinotate.longest_orf.json|the Trinotate functional annotation of the merged unigenes: product, Pfam and GO"
-  "tsa.GJYY.1.fsa_nt.gz|${TSA}|${TRANSCRIPTOME}|${TSA_BASE}/tsa.GJYY.1.fsa_nt.gz|the Orvis 2022 CNS transcriptome: the lift-off source, whose record count, base total and length extremes all match the publisher's published aggregates in stats.tsa.GJYY"
-  "tsa.GJYY.1.gbff.gz|${TSA}|${TRANSCRIPTOME}|${TSA_BASE}/tsa.GJYY.1.gbff.gz|the Orvis 2022 CNS transcriptome in GenBank flatfile format: the sequences carry no gene models, and their DEFINITION lines carry the original Trinity and asmbl names, which are the only bridge between the GenBank and AplysiaTools identifiers"
+  "new_unigenes.fasta|none|${TOOLS_2020}|${TOOLS_BASE}/new_unigenes.fasta|the 2020 merged-unigene build: 26,849 nucleotide sequences, a subset of the 2022 assembly that matches no published count. Not the analysis input"
+  "annotation_1A-2C.fasta|${TSA}|${TOOLS_CNS}|${TOOLS_BASE}/annotation_1A-2C.fasta|the CNS set: 39,486 nucleotide sequences, the paper's final unigene set at a minimum ORF length of 400 bp, carrying the Trinotate product names. The analysis input"
+  "current.annotation.fasta|none|${TOOLS_CURRENT}|${TOOLS_BASE}/current.annotation.fasta|AplysiaTools' live annotation: every tissue's nucleotide sequences in one file, of which the CNS subset is identical to annotation_1A-2C.fasta"
+  "merged.unigenes.trinotate.longest_orf.json|none|${TOOLS_2020}|${TOOLS_BASE}/merged.unigenes.trinotate.longest_orf.json|the Trinotate functional annotation of the 2020 merged unigenes: product, Pfam and GO"
+  "tsa.GJYY.1.fsa_nt.gz|${TSA}|${TRANSCRIPTOME}|${TSA_BASE}/tsa.GJYY.1.fsa_nt.gz|the Orvis 2022 CNS transcriptome as deposited: 68,308 transcripts, the paper's DN-Trinity arm. The citable accession and the independent check on the sequences, whose record count, base total and length extremes all match the publisher's published aggregates in stats.tsa.GJYY"
+  "tsa.GJYY.1.gbff.gz|${TSA}|${TRANSCRIPTOME}|${TSA_BASE}/tsa.GJYY.1.gbff.gz|the Orvis 2022 CNS transcriptome in GenBank flatfile format: the sequences carry no gene models, and their DEFINITION lines carry the original Trinity and asmbl names, as do the FASTA headers. Two independent records of the same mapping"
   "tsa.GJYY.mstr.gbff.gz|${TSA}|${TRANSCRIPTOME}|${TSA_BASE}/tsa.GJYY.mstr.gbff.gz|the TSA master record: the deposition's own accession, version, BioProject, BioSample, SRA, dates and assembly method"
   "stats.tsa.GJYY|${TSA}|${TRANSCRIPTOME}|${TSA_BASE}/stats.tsa.GJYY|the publisher's own counts for the TSA project: sequences, bases, longest and shortest"
 )
